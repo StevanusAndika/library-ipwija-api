@@ -1,43 +1,38 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\Book;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class BookController extends Controller
 {
-    public function index(Request $request)
+    // Public access - tanpa login
+    public function indexPublic(Request $request)
     {
         $query = Book::with('category')
-            ->where('is_active', true);
+            ->where('status', 1)
+            ->where('available_stock', '>', 0);
 
-        // Filter by search
+        // Search filter
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
                   ->orWhere('author', 'like', "%{$search}%")
                   ->orWhere('isbn', 'like', "%{$search}%")
-                  ->orWhere('publisher', 'like', "%{$search}%")
-                  ->orWhere('synopsis', 'like', "%{$search}%"); // Include sinopsis in search
+                  ->orWhere('synopsis', 'like', "%{$search}%");
             });
         }
 
         // Filter by category
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
-        }
-
-        // Filter by category type
-        if ($request->has('type')) {
-            $query->whereHas('category', function($q) use ($request) {
-                $q->where('type', $request->type);
-            });
         }
 
         // Filter by book type
@@ -50,14 +45,85 @@ class BookController extends Controller
             $query->where('language', $request->language);
         }
 
+        // Sort options
+        $sortField = $request->get('sort_field', 'title');
+        $sortOrder = $request->get('sort_order', 'asc');
+        $query->orderBy($sortField, $sortOrder);
+
+        $perPage = $request->get('per_page', 12);
+        $books = $query->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Books retrieved successfully',
+            'data' => $books
+        ]);
+    }
+
+    public function showPublic($id)
+    {
+        $book = Book::with('category')->find($id);
+
+        if (!$book || $book->status != 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Book not found',
+                'data' => null
+            ], 404);
+        }
+
+        // Hide file_path for public
+        $book->makeHidden(['file_path']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Book retrieved successfully',
+            'data' => $book
+        ]);
+    }
+
+    // Admin only - semua buku
+    public function index(Request $request)
+    {
+        $query = Book::with('category');
+
+        // Search filter
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('author', 'like', "%{$search}%")
+                  ->orWhere('isbn', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by category
+        if ($request->has('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        // Filter by book type
+        if ($request->has('book_type')) {
+            $query->where('book_type', $request->book_type);
+        }
+
+        // Filter by status
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
         // Filter by availability
         if ($request->has('available')) {
             $query->where('available_stock', '>', 0);
         }
 
-        // Pagination
+        // Sort options
+        $sortField = $request->get('sort_field', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortField, $sortOrder);
+
         $perPage = $request->get('per_page', 15);
-        $books = $query->orderBy('title')->paginate($perPage);
+        $books = $query->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -69,20 +135,21 @@ class BookController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'isbn' => 'nullable|string|max:20|unique:books,isbn',
+            'isbn' => 'nullable|string|max:20|unique:books',
             'title' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'author' => 'required|string|max:255',
             'publisher' => 'required|string|max:255',
             'publication_year' => 'required|integer|min:1900|max:' . date('Y'),
-            'stock' => 'required|integer|min:0',
+            'stock' => 'required|integer|min:1',
             'book_type' => 'required|in:hardcopy,softcopy',
-            'file_path' => 'required_if:book_type,softcopy|nullable|file|mimes:pdf,doc,docx,epub|max:10240',
+            'file_path' => 'required_if:book_type,softcopy|nullable|file|mimes:pdf|max:10240',
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'description' => 'nullable|string',
-            'synopsis' => 'nullable|string', // Validasi sinopsis
+            'synopsis' => 'nullable|string',
             'pages' => 'nullable|integer|min:1',
             'language' => 'nullable|string|max:50',
+            'status' => 'nullable|in:0,1'
         ]);
 
         if ($validator->fails()) {
@@ -93,20 +160,27 @@ class BookController extends Controller
             ], 422);
         }
 
-        // Check if category can be borrowed
+        // Check category - PERBAIKAN: tambahkan pengecekan null
         $category = Category::find($request->category_id);
-        if (!$category->can_borrow && $request->book_type === 'hardcopy') {
+
+        if (!$category) {
             return response()->json([
                 'success' => false,
-                'message' => 'Books in this category cannot be borrowed',
-                'data' => null
+                'message' => 'Category not found'
+            ], 404);
+        }
+
+        if ($category->status != 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category is not active'
             ], 400);
         }
 
         $bookData = [
             'isbn' => $request->isbn,
             'title' => $request->title,
-            'slug' => Str::slug($request->title) . '-' . Str::random(5),
+            'slug' => Str::slug($request->title) . '-' . Str::random(6),
             'category_id' => $request->category_id,
             'author' => $request->author,
             'publisher' => $request->publisher,
@@ -115,15 +189,16 @@ class BookController extends Controller
             'available_stock' => $request->stock,
             'book_type' => $request->book_type,
             'description' => $request->description,
-            'synopsis' => $request->synopsis, // Simpan sinopsis
+            'synopsis' => $request->synopsis,
             'pages' => $request->pages,
             'language' => $request->language ?? 'Indonesia',
+            'status' => $request->has('status') ? $request->status : 1
         ];
 
-        // Handle file upload for softcopy
+        // Handle softcopy file upload
         if ($request->book_type === 'softcopy' && $request->hasFile('file_path')) {
             $file = $request->file('file_path');
-            $filename = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+            $filename = 'ebook_' . time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('ebooks', $filename, 'public');
             $bookData['file_path'] = $path;
         }
@@ -131,7 +206,7 @@ class BookController extends Controller
         // Handle cover image upload
         if ($request->hasFile('cover_image')) {
             $image = $request->file('cover_image');
-            $imageName = time() . '_' . Str::random(10) . '.' . $image->getClientOriginalExtension();
+            $imageName = 'cover_' . time() . '_' . Str::random(10) . '.' . $image->getClientOriginalExtension();
             $imagePath = $image->storeAs('book_covers', $imageName, 'public');
             $bookData['cover_image'] = $imagePath;
         }
@@ -147,7 +222,11 @@ class BookController extends Controller
 
     public function show($id)
     {
-        $book = Book::with('category')->find($id);
+        $book = Book::with(['category', 'borrowings' => function($query) {
+            $query->whereIn('status', ['borrowed', 'late'])
+                  ->with('user')
+                  ->limit(5);
+        }])->find($id);
 
         if (!$book) {
             return response()->json([
@@ -185,13 +264,13 @@ class BookController extends Controller
             'publication_year' => 'required|integer|min:1900|max:' . date('Y'),
             'stock' => 'required|integer|min:0',
             'book_type' => 'required|in:hardcopy,softcopy',
-            'file_path' => 'nullable|file|mimes:pdf,doc,docx,epub|max:10240',
+            'file_path' => 'nullable|file|mimes:pdf|max:10240',
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'description' => 'nullable|string',
-            'synopsis' => 'nullable|string', // Validasi sinopsis
+            'synopsis' => 'nullable|string',
             'pages' => 'nullable|integer|min:1',
             'language' => 'nullable|string|max:50',
-            'is_active' => 'boolean',
+            'status' => 'nullable|in:0,1'
         ]);
 
         if ($validator->fails()) {
@@ -202,20 +281,27 @@ class BookController extends Controller
             ], 422);
         }
 
-        // Check if category can be borrowed
+        // Check category - PERBAIKAN: tambahkan pengecekan null
         $category = Category::find($request->category_id);
-        if (!$category->can_borrow && $request->book_type === 'hardcopy') {
+
+        if (!$category) {
             return response()->json([
                 'success' => false,
-                'message' => 'Books in this category cannot be borrowed',
-                'data' => null
+                'message' => 'Category not found'
+            ], 404);
+        }
+
+        if ($category->status != 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category is not active'
             ], 400);
         }
 
         $bookData = [
             'isbn' => $request->isbn,
             'title' => $request->title,
-            'slug' => Str::slug($request->title) . '-' . Str::random(5),
+            'slug' => Str::slug($request->title) . '-' . Str::random(6),
             'category_id' => $request->category_id,
             'author' => $request->author,
             'publisher' => $request->publisher,
@@ -223,13 +309,13 @@ class BookController extends Controller
             'stock' => $request->stock,
             'book_type' => $request->book_type,
             'description' => $request->description,
-            'synopsis' => $request->synopsis, // Update sinopsis
+            'synopsis' => $request->synopsis,
             'pages' => $request->pages,
             'language' => $request->language ?? $book->language,
-            'is_active' => $request->boolean('is_active', $book->is_active),
+            'status' => $request->has('status') ? $request->status : $book->status
         ];
 
-        // Handle file upload for softcopy
+        // Handle file update for softcopy
         if ($request->hasFile('file_path')) {
             // Delete old file if exists
             if ($book->file_path && Storage::disk('public')->exists($book->file_path)) {
@@ -237,12 +323,12 @@ class BookController extends Controller
             }
 
             $file = $request->file('file_path');
-            $filename = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+            $filename = 'ebook_' . time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('ebooks', $filename, 'public');
             $bookData['file_path'] = $path;
         }
 
-        // Handle cover image upload
+        // Handle cover image update
         if ($request->hasFile('cover_image')) {
             // Delete old image if exists
             if ($book->cover_image && Storage::disk('public')->exists($book->cover_image)) {
@@ -250,12 +336,12 @@ class BookController extends Controller
             }
 
             $image = $request->file('cover_image');
-            $imageName = time() . '_' . Str::random(10) . '.' . $image->getClientOriginalExtension();
+            $imageName = 'cover_' . time() . '_' . Str::random(10) . '.' . $image->getClientOriginalExtension();
             $imagePath = $image->storeAs('book_covers', $imageName, 'public');
             $bookData['cover_image'] = $imagePath;
         }
 
-        // Calculate new available stock
+        // Calculate available stock
         $borrowedCount = $book->activeBorrowings()->count();
         $bookData['available_stock'] = max(0, $request->stock - $borrowedCount);
 
@@ -284,12 +370,11 @@ class BookController extends Controller
         if ($book->activeBorrowings()->count() > 0) {
             return response()->json([
                 'success' => false,
-                'message' => 'Cannot delete book that has active borrowings',
-                'data' => null
+                'message' => 'Cannot delete book that has active borrowings'
             ], 400);
         }
 
-        // Delete associated files
+        // Delete files
         if ($book->file_path && Storage::disk('public')->exists($book->file_path)) {
             Storage::disk('public')->delete($book->file_path);
         }
@@ -302,8 +387,7 @@ class BookController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Book deleted successfully',
-            'data' => null
+            'message' => 'Book deleted successfully'
         ]);
     }
 
@@ -311,58 +395,23 @@ class BookController extends Controller
     {
         $book = Book::find($id);
 
-        if (!$book || $book->book_type !== 'softcopy' || !$book->file_path) {
+        if (!$book || $book->book_type !== 'softcopy' || !$book->file_path || $book->status != 1) {
             return response()->json([
                 'success' => false,
-                'message' => 'Ebook not available',
-                'data' => null
+                'message' => 'Ebook not available'
             ], 404);
         }
 
         if (!Storage::disk('public')->exists($book->file_path)) {
             return response()->json([
                 'success' => false,
-                'message' => 'File not found',
-                'data' => null
+                'message' => 'File not found'
             ], 404);
         }
 
-        $downloadUrl = Storage::disk('public')->url($book->file_path);
+        $filePath = storage_path('app/public/' . $book->file_path);
+        $fileName = Str::slug($book->title) . '.pdf';
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Download link generated',
-            'data' => [
-                'download_url' => $downloadUrl,
-                'filename' => basename($book->file_path)
-            ]
-        ]);
-    }
-
-    // Get books with synopsis (public endpoint)
-    public function getBooksWithSynopsis(Request $request)
-    {
-        $query = Book::with('category')
-            ->where('is_active', true)
-            ->whereNotNull('synopsis') // Only books with synopsis
-            ->where('synopsis', '!=', '');
-
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('author', 'like', "%{$search}%")
-                  ->orWhere('synopsis', 'like', "%{$search}%");
-            });
-        }
-
-        $perPage = $request->get('per_page', 10);
-        $books = $query->orderBy('title')->paginate($perPage);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Books with synopsis retrieved successfully',
-            'data' => $books
-        ]);
+        return response()->download($filePath, $fileName);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Borrowing extends Model
 {
@@ -35,10 +36,22 @@ class Borrowing extends Model
         'extended_due_date' => 'date',
         'is_extended' => 'boolean',
         'fine_paid' => 'boolean',
-        'late_days' => 'integer',
         'fine_amount' => 'decimal:2',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($borrowing) {
+            // Generate borrow_code jika kosong
+            if (empty($borrowing->borrow_code)) {
+                $borrowing->borrow_code = 'BOR-' . strtoupper(Str::random(6)) . '-' . date('Ymd');
+            }
+        });
+    }
+
+    // Relationships
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -54,56 +67,79 @@ class Borrowing extends Model
         return $this->hasOne(Fine::class);
     }
 
-    public function isLate()
+    // Scopes
+    public function scopePending($query)
     {
-        if ($this->return_date) {
-            return false;
-        }
-
-        $dueDate = $this->extended_due_date ?? $this->due_date;
-        return now()->greaterThan($dueDate);
+        return $query->where('status', 'pending');
     }
 
-    public function calculateLateDays()
+    public function scopeApproved($query)
     {
-        if ($this->return_date || !$this->isLate()) {
-            return 0;
-        }
-
-        $dueDate = $this->extended_due_date ?? $this->due_date;
-        return now()->diffInDays($dueDate);
+        return $query->where('status', 'approved');
     }
 
-    public function calculateFine()
+    public function scopeBorrowed($query)
     {
-        $lateDays = $this->calculateLateDays();
-        return $lateDays * 1000;
+        return $query->where('status', 'borrowed');
+    }
+
+    public function scopeLate($query)
+    {
+        return $query->where('status', 'late');
+    }
+
+    public function scopeReturned($query)
+    {
+        return $query->where('status', 'returned');
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', ['approved', 'borrowed', 'late']);
+    }
+
+    // Helper methods
+    public function isOverdue()
+    {
+        return $this->status === 'late' || ($this->due_date < now() && $this->status === 'borrowed');
+    }
+
+    public function getDaysLateAttribute()
+    {
+        if ($this->status === 'late' || $this->return_date) {
+            $dueDate = $this->due_date ?: $this->extended_due_date;
+            $compareDate = $this->return_date ?: now();
+
+            return max(0, $dueDate->diffInDays($compareDate, false));
+        }
+
+        return 0;
+    }
+
+    public function getTotalFineAttribute()
+    {
+        return $this->fine_amount + ($this->days_late * 1000); // Rp 1000 per hari
     }
 
     public function canBeExtended()
     {
-        return !$this->is_extended &&
-               !$this->isLate() &&
-               $this->status === 'borrowed' &&
-               now()->lessThanOrEqualTo($this->due_date);
+        return $this->status === 'borrowed'
+            && !$this->is_extended
+            && $this->due_date->diffInDays(now(), false) <= -3; // Minimal 3 hari sebelum jatuh tempo
     }
 
-    public function markAsLate()
+    public function extend($days = 3)
     {
-        if ($this->isLate() && $this->status !== 'late') {
-            $this->status = 'late';
-            $this->late_days = $this->calculateLateDays();
-            $this->fine_amount = $this->calculateFine();
-            $this->save();
-
-            Fine::create([
-                'borrowing_id' => $this->id,
-                'user_id' => $this->user_id,
-                'amount' => $this->fine_amount,
-                'late_days' => $this->late_days,
-                'fine_date' => now(),
-                'description' => 'Denda keterlambatan pengembalian buku',
-            ]);
+        if (!$this->canBeExtended()) {
+            return false;
         }
+
+        $this->is_extended = true;
+        $this->extended_date = now();
+        $this->extended_due_date = $this->due_date->copy()->addDays($days);
+        $this->due_date = $this->extended_due_date;
+        $this->save();
+
+        return true;
     }
 }

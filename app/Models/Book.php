@@ -24,10 +24,10 @@ class Book extends Model
         'file_path',
         'cover_image',
         'description',
-        'synopsis', // TAMBAH SINOPIS
-        'pages',    // TAMBAH PAGES
-        'language', // TAMBAH LANGUAGE
-        'is_active',
+        'synopsis',
+        'pages',
+        'language',
+        'status',
     ];
 
     protected $casts = [
@@ -35,9 +35,22 @@ class Book extends Model
         'stock' => 'integer',
         'available_stock' => 'integer',
         'pages' => 'integer',
-        'is_active' => 'boolean',
+        'status' => 'integer',
     ];
 
+    // Accessor untuk is_active (kompatibilitas dengan query)
+    public function getIsActiveAttribute()
+    {
+        return $this->status == 1;
+    }
+
+    // Scope untuk query
+    public function scopeWhereIsActive($query, $active = true)
+    {
+        return $query->where('status', $active ? 1 : 0);
+    }
+
+    // Relationship dengan Category
     public function category()
     {
         return $this->belongsTo(Category::class);
@@ -55,7 +68,7 @@ class Book extends Model
 
     public function isAvailable()
     {
-        return $this->available_stock > 0 && $this->is_active;
+        return $this->available_stock > 0 && $this->status == 1;
     }
 
     public function isSoftCopy()

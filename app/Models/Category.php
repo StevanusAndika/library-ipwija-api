@@ -17,15 +17,27 @@ class Category extends Model
         'description',
         'max_borrow_days',
         'can_borrow',
-        'is_active',
+        'status', // GANTI is_active menjadi status
     ];
 
     protected $casts = [
         'max_borrow_days' => 'integer',
         'can_borrow' => 'boolean',
-        'is_active' => 'boolean',
     ];
 
+    // Accessor untuk is_active (kompatibilitas)
+    public function getIsActiveAttribute()
+    {
+        return $this->status == 1;
+    }
+
+    // Scope untuk query
+    public function scopeWhereIsActive($query, $active = true)
+    {
+        return $query->where('status', $active ? 1 : 0);
+    }
+
+    // Relationship
     public function books()
     {
         return $this->hasMany(Book::class);
@@ -33,7 +45,7 @@ class Category extends Model
 
     public function activeBooks()
     {
-        return $this->books()->where('is_active', true);
+        return $this->books()->where('status', 1);
     }
 
     public function isResearchCategory()
@@ -43,6 +55,6 @@ class Category extends Model
 
     public function canBeBorrowed()
     {
-        return $this->can_borrow && $this->is_active;
+        return $this->can_borrow && $this->status == 1;
     }
 }

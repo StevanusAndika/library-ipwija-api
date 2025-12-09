@@ -17,38 +17,34 @@ class CorsMiddleware
             'http://127.0.0.1:8000',
             'http://10.0.2.2',
             'http://localhost',
+            'http://localhost:5500',
+            'http://127.0.0.1:5500',
         ];
 
         $origin = $request->headers->get('Origin');
 
+        $response = $next($request);
+
         if (in_array($origin, $allowedOrigins)) {
-            header("Access-Control-Allow-Origin: {$origin}");
+            $response->headers->set('Access-Control-Allow-Origin', $origin);
         } else {
-            header('Access-Control-Allow-Origin: *');
+            $response->headers->set('Access-Control-Allow-Origin', '*');
         }
 
-        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-CSRF-TOKEN, Accept, Origin');
-        header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
-        header('Access-Control-Allow-Credentials: true');
-        header('Access-Control-Max-Age: 86400');
+        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-CSRF-TOKEN, Accept, Origin, X-API-Key');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Credentials', 'true');
+        $response->headers->set('Access-Control-Max-Age', '86400');
+        $response->headers->set('Vary', 'Origin');
 
         if ($request->getMethod() === 'OPTIONS') {
             return response()->json([], 200, [
                 'Access-Control-Allow-Origin' => $origin ?? '*',
-                'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Requested-With, X-CSRF-TOKEN, Accept, Origin',
+                'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Requested-With, X-CSRF-TOKEN, Accept, Origin, X-API-Key',
                 'Access-Control-Allow-Methods' => 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
                 'Access-Control-Allow-Credentials' => 'true',
                 'Access-Control-Max-Age' => '86400',
             ]);
-        }
-
-        $response = $next($request);
-
-        if ($response instanceof Response) {
-            $response->headers->set('Access-Control-Allow-Origin', $origin ?? '*');
-            $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-CSRF-TOKEN, Accept, Origin');
-            $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-            $response->headers->set('Access-Control-Allow-Credentials', 'true');
         }
 
         return $response;

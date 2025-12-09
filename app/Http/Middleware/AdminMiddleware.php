@@ -5,24 +5,32 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Auth;
 
 class AdminMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized. Please login first.',
-                'data' => null
+                'message' => 'Unauthorized. Please login first.'
             ], 401);
         }
 
-        if (auth()->user()->role !== 'admin') {
+        $user = Auth::user();
+
+        if (!$user->isAdmin()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Forbidden. Admin access required.',
-                'data' => null
+                'message' => 'Forbidden. Admin access only.'
+            ], 403);
+        }
+
+        if (!$user->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account is deactivated.'
             ], 403);
         }
 

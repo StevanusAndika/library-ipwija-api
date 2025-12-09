@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Register custom middleware
+        // Register middleware alias
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'mahasiswa' => \App\Http\Middleware\MahasiswaMiddleware::class,
@@ -20,7 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // Add CORS middleware to global middleware
-        $middleware->append(\App\Http\Middleware\CorsMiddleware::class);
+        $middleware->appendToGroup('api', \App\Http\Middleware\CorsMiddleware::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\CorsMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
