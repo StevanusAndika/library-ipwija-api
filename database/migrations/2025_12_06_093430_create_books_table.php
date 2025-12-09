@@ -26,7 +26,7 @@ return new class extends Migration
             $table->text('synopsis')->nullable(); // TAMBAH KOLOM SINOPIS
             $table->integer('pages')->nullable(); // TAMBAH KOLOM JUMLAH HALAMAN
             $table->string('language')->default('Indonesia'); // TAMBAH KOLOM BAHASA
-            $table->boolean('is_active')->default(true);
+            $table->unsignedTinyInteger('status')->default(1); // UBAH STATUS: 1 aktif, 0 tidak aktif
             $table->timestamps();
             $table->softDeletes();
         });

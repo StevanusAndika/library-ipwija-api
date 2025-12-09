@@ -17,19 +17,19 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->integer('max_borrow_days')->default(7);
             $table->boolean('can_borrow')->default(true);
-            $table->boolean('is_active')->default(true);
+            $table->tinyInteger('status')->default(1); // GANTI is_active menjadi status
             $table->timestamps();
             $table->softDeletes();
         });
 
         // Insert default categories
         $categories = [
-            ['name' => 'Novel', 'slug' => 'novel', 'type' => 'fiksi', 'can_borrow' => true],
-            ['name' => 'Teknologi', 'slug' => 'teknologi', 'type' => 'umum', 'can_borrow' => true],
-            ['name' => 'Penelitian', 'slug' => 'penelitian', 'type' => 'penelitian', 'can_borrow' => false],
-            ['name' => 'Akademik', 'slug' => 'akademik', 'type' => 'akademik', 'can_borrow' => true],
-            ['name' => 'Sejarah', 'slug' => 'sejarah', 'type' => 'non-fiksi', 'can_borrow' => true],
-            ['name' => 'Referensi', 'slug' => 'referensi', 'type' => 'referensi', 'can_borrow' => true],
+            ['name' => 'Novel', 'slug' => 'novel', 'type' => 'fiksi', 'can_borrow' => true, 'status' => 1],
+            ['name' => 'Teknologi', 'slug' => 'teknologi', 'type' => 'umum', 'can_borrow' => true, 'status' => 1],
+            ['name' => 'Penelitian', 'slug' => 'penelitian', 'type' => 'penelitian', 'can_borrow' => false, 'status' => 1],
+            ['name' => 'Akademik', 'slug' => 'akademik', 'type' => 'akademik', 'can_borrow' => true, 'status' => 1],
+            ['name' => 'Sejarah', 'slug' => 'sejarah', 'type' => 'non-fiksi', 'can_borrow' => true, 'status' => 1],
+            ['name' => 'Referensi', 'slug' => 'referensi', 'type' => 'referensi', 'can_borrow' => true, 'status' => 1],
         ];
 
         foreach ($categories as $category) {
@@ -38,6 +38,7 @@ return new class extends Migration
                 'slug' => $category['slug'],
                 'type' => $category['type'],
                 'can_borrow' => $category['can_borrow'],
+                'status' => $category['status'],
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

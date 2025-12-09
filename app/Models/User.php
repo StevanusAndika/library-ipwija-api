@@ -193,35 +193,37 @@ class User extends Authenticatable
     /**
      * Check if user can borrow (validation rules)
      */
-    public function canBorrow(): bool
-    {
-        // User must be mahasiswa
-        if (!$this->isMahasiswa()) {
-            return false;
-        }
+   // Di Model User (App\Models\User.php)
 
-        // User must be active member
-        if (!$this->is_anggota || !$this->is_active) {
-            return false;
-        }
+        public function canBorrow(): bool
+        {
+            // User must be mahasiswa
+            if (!$this->isMahasiswa()) {
+                return false;
+            }
 
-        // User must not have unpaid fines
-        if ($this->hasUnpaidFines()) {
-            return false;
-        }
+            // User must be active member
+            if (!$this->is_anggota || !$this->is_active) {
+                return false;
+            }
 
-        // User must not have late returns
-        if ($this->hasLateReturns()) {
-            return false;
-        }
+            // User must not have unpaid fines
+            if ($this->hasUnpaidFines()) {
+                return false;
+            }
 
-        // User must not exceed max active borrowings (max 2)
-        if ($this->activeBorrowCount() >= 2) {
-            return false;
-        }
+            // User must not have late returns
+            if ($this->hasLateReturns()) {
+                return false;
+            }
 
-        return true;
-    }
+            // User must not exceed max active borrowings (max 2)
+            if ($this->activeBorrowCount() >= 2) {
+                return false;
+            }
+
+            return true;
+        }
 
     /**
      * Get user's borrowing history
