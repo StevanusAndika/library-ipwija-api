@@ -7,11 +7,10 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
 
-class AdminMiddleware
+class UserMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Cek apakah user sudah login
         if (!Auth::check()) {
             return response()->json([
                 'success' => false,
@@ -21,11 +20,11 @@ class AdminMiddleware
 
         $user = Auth::user();
 
-        // Cek apakah user adalah admin
-        if (!$user->isAdmin()) {
+        // FIX: Sesuaikan dengan struktur baru (role 'user' bukan 'mahasiswa')
+        if ($user->role !== 'user') {
             return response()->json([
                 'success' => false,
-                'message' => 'Forbidden. Admin access only.'
+                'message' => 'Forbidden. Regular user access only.'
             ], 403);
         }
 

@@ -17,7 +17,7 @@ class Category extends Model
         'description',
         'max_borrow_days',
         'can_borrow',
-        'status', // GANTI is_active menjadi status
+        'status',
     ];
 
     protected $casts = [
@@ -25,27 +25,16 @@ class Category extends Model
         'can_borrow' => 'boolean',
     ];
 
-    // Accessor untuk is_active (kompatibilitas)
-    public function getIsActiveAttribute()
-    {
-        return $this->status == 1;
-    }
-
-    // Scope untuk query
-    public function scopeWhereIsActive($query, $active = true)
-    {
-        return $query->where('status', $active ? 1 : 0);
-    }
-
-    // Relationship
+    // Relationships
     public function books()
     {
         return $this->hasMany(Book::class);
     }
 
-    public function activeBooks()
+    // Helper Methods
+    public function isActive()
     {
-        return $this->books()->where('status', 1);
+        return $this->status == 1;
     }
 
     public function isResearchCategory()
@@ -55,6 +44,39 @@ class Category extends Model
 
     public function canBeBorrowed()
     {
-        return $this->can_borrow && $this->status == 1;
+        return $this->can_borrow && $this->isActive();
+    }
+
+    // Scopes
+    public function scopeActive($query)
+    {
+        return $query->where('status', 1);
+    }
+
+    public function scopeBorrowable($query)
+    {
+        return $query->where('can_borrow', true)->where('status', 1);
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        return $query->where('name', 'like', "%{$search}%")
+            ->orWhere('description', 'like', "%{$search}%");
+    }
+
+    // Accessors
+    public function getIsActiveAttribute()
+    {
+        return $this->status == 1;
+    }
+
+    public function getActiveBooksCountAttribute()
+    {
+        return $this->books()->where('status', 1)->count();
+    }
+
+    public function getAvailableBooksCountAttribute()
+    {
+        return $this->books()->where('status', 1)->where('available_stock', '>', 0)->count();
     }
 }

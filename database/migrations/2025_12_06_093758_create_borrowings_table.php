@@ -16,13 +16,22 @@ return new class extends Migration
             $table->date('borrow_date');
             $table->date('due_date');
             $table->date('return_date')->nullable();
-            $table->enum('status', ['pending', 'approved', 'rejected', 'borrowed', 'returned', 'late'])->default('pending');
+            $table->enum('status', ['pending', 'approved', 'rejected', 'borrowed', 'returned', 'late', 'cancelled'])->default('pending');
             $table->boolean('is_extended')->default(false);
             $table->date('extended_date')->nullable();
             $table->date('extended_due_date')->nullable();
             $table->integer('late_days')->default(0);
             $table->decimal('fine_amount', 10, 2)->default(0);
             $table->boolean('fine_paid')->default(false);
+
+            // Tambahkan kolom baru
+            $table->datetime('approved_at')->nullable();
+            $table->datetime('borrowed_at')->nullable();
+            $table->datetime('returned_at')->nullable();
+            $table->datetime('rejected_at')->nullable();
+            $table->text('rejection_reason')->nullable();
+            $table->datetime('extended_at')->nullable();
+
             $table->text('notes')->nullable();
             $table->timestamps();
             $table->softDeletes();

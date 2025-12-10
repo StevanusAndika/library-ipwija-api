@@ -10,30 +10,29 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-    protected $guarded = [];
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'role',
+        'nim',
+        'phone',
+        'address',
+        'tempat_lahir',
+        'tanggal_lahir',
+        'gender',
+        'agama',
+        'status',
+        'profile_picture',
+    ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -44,202 +43,335 @@ class User extends Authenticatable
     }
 
     // ==================== RELATIONSHIPS ====================
-
-    /**
-     * Get all borrowings for this user
-     */
     public function borrowings()
     {
         return $this->hasMany(Borrowing::class);
     }
 
-    /**
-     * Get active borrowings (approved, borrowed, late)
-     */
     public function activeBorrowings()
     {
         return $this->hasMany(Borrowing::class)
-            ->whereIn('status', ['approved', 'borrowed', 'late']);
+            ->whereIn('status', ['approved', 'borrowed']);
     }
 
-    /**
-     * Get returned borrowings
-     */
     public function returnedBorrowings()
     {
         return $this->hasMany(Borrowing::class)
             ->where('status', 'returned');
     }
 
-    /**
-     * Get pending borrowings
-     */
     public function pendingBorrowings()
     {
         return $this->hasMany(Borrowing::class)
             ->where('status', 'pending');
     }
 
-    /**
-     * Get late borrowings
-     */
-    public function lateBorrowings()
-    {
-        return $this->hasMany(Borrowing::class)
-            ->where('status', 'late');
-    }
-
-    /**
-     * Get all fines for this user
-     */
     public function fines()
     {
         return $this->hasMany(Fine::class);
     }
 
-    /**
-     * Get unpaid fines
-     */
     public function unpaidFines()
     {
         return $this->hasMany(Fine::class)
             ->where('status', 'unpaid');
     }
 
-    /**
-     * Get paid fines
-     */
     public function paidFines()
     {
         return $this->hasMany(Fine::class)
             ->where('status', 'paid');
     }
 
-    // ==================== HELPER METHODS ====================
-
-    /**
-     * Check if user is admin
-     */
+    // ==================== BASIC VALIDATION METHODS ====================
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
     }
 
-    /**
-     * Check if user is mahasiswa
-     */
-    public function isMahasiswa(): bool
+    public function isUser(): bool
     {
-        return $this->role === 'mahasiswa';
+        return $this->role === 'user';
     }
 
-    /**
-     * Check if user has late returns
-     */
-    public function hasLateReturns(): bool
+    public function isActive(): bool
     {
-        return $this->lateBorrowings()->exists();
+        return $this->status === 'ACTIVE';
     }
 
-    /**
-     * Check if user has pending approval
-     */
-    public function hasPendingApproval(): bool
-    {
-        return $this->pendingBorrowings()->exists();
-    }
-
-    /**
-     * Count active borrowings
-     */
-    public function activeBorrowCount(): int
-    {
-        return $this->activeBorrowings()->count();
-    }
-
-    /**
-     * Check if user has unpaid fines
-     */
     public function hasUnpaidFines(): bool
     {
         return $this->unpaidFines()->exists();
     }
 
-    /**
-     * Get total unpaid fines amount
-     */
+    public function hasLateReturns(): bool
+    {
+        return $this->borrowings()->where('status', 'late')->exists();
+    }
+
+    public function activeBorrowCount(): int
+    {
+        return $this->activeBorrowings()->count();
+    }
+
     public function getTotalUnpaidFines(): float
     {
         return $this->unpaidFines()->sum('amount');
     }
 
+    // FIX: Added canBorrow method
+    public function canBorrow(): bool
+    {
+        return $this->canBorrowAnyBook()['can_borrow'];
+    }
+
+    // ==================== STRICT BORROWING VALIDATION ====================
+
     /**
-     * Check if user can borrow (validation rules)
+     * Strict check: User cannot borrow ANY new books
      */
-   // Di Model User (App\Models\User.php)
+    public function canBorrowAnyBook(): array
+    {
+        $reasons = [];
+        $canBorrow = true;
 
-        public function canBorrow(): bool
-        {
-            // User must be mahasiswa
-            if (!$this->isMahasiswa()) {
-                return false;
-            }
-
-            // User must be active member
-            if (!$this->is_anggota || !$this->is_active) {
-                return false;
-            }
-
-            // User must not have unpaid fines
-            if ($this->hasUnpaidFines()) {
-                return false;
-            }
-
-            // User must not have late returns
-            if ($this->hasLateReturns()) {
-                return false;
-            }
-
-            // User must not exceed max active borrowings (max 2)
-            if ($this->activeBorrowCount() >= 2) {
-                return false;
-            }
-
-            return true;
+        // 1. Check if account is active
+        if (!$this->isActive()) {
+            $canBorrow = false;
+            $reasons[] = [
+                'type' => 'account_inactive',
+                'message' => 'Akun Anda tidak aktif',
+                'detail' => 'Status akun: ' . $this->status
+            ];
         }
 
+        // 2. Check for unpaid fines
+        if ($this->hasUnpaidFines()) {
+            $canBorrow = false;
+            $reasons[] = [
+                'type' => 'unpaid_fines',
+                'message' => 'Anda memiliki denda yang belum dibayar',
+                'detail' => 'Total denda: Rp ' . number_format($this->getTotalUnpaidFines(), 0, ',', '.')
+            ];
+        }
+
+        // 3. Check for late returns
+        if ($this->hasLateReturns()) {
+            $canBorrow = false;
+            $lateCount = $this->borrowings()->where('status', 'late')->count();
+            $reasons[] = [
+                'type' => 'late_returns',
+                'message' => 'Anda memiliki buku yang terlambat dikembalikan',
+                'detail' => 'Jumlah buku terlambat: ' . $lateCount . ' buku'
+            ];
+        }
+
+        // 4. Check max borrowing limit (2 books)
+        if ($this->activeBorrowCount() >= 2) {
+            $canBorrow = false;
+            $reasons[] = [
+                'type' => 'max_limit',
+                'message' => 'Anda sudah mencapai batas maksimal peminjaman',
+                'detail' => 'Anda sudah meminjam ' . $this->activeBorrowCount() . ' dari 2 buku maksimal'
+            ];
+        }
+
+        // 5. Check for books approaching due date (within 2 days)
+        $approachingDueCount = $this->borrowings()
+            ->where('status', 'borrowed')
+            ->where('due_date', '<=', now()->addDays(2))
+            ->where('due_date', '>', now())
+            ->count();
+
+        if ($approachingDueCount > 0) {
+            $canBorrow = false;
+            $reasons[] = [
+                'type' => 'approaching_due',
+                'message' => 'Anda memiliki buku yang hampir jatuh tempo',
+                'detail' => 'Jumlah buku hampir jatuh tempo: ' . $approachingDueCount . ' buku'
+            ];
+        }
+
+        return [
+            'can_borrow' => $canBorrow,
+            'message' => $canBorrow ? 'Anda dapat meminjam buku' : 'ANDA TIDAK DAPAT MEMINJAM BUKU BARU',
+            'reasons' => $reasons,
+            'total_reasons' => count($reasons),
+            'blocking_details' => $this->getBlockingBorrowingsDetails()
+        ];
+    }
+
     /**
-     * Get user's borrowing history
+     * Get detailed blocking information
      */
-    public function borrowingHistory()
+    public function getBlockingBorrowingsDetails(): array
+    {
+        $details = [];
+
+        // Get all overdue books
+        $overdueBooks = $this->borrowings()
+            ->where('status', 'late')
+            ->with('book')
+            ->get()
+            ->map(function($borrowing) {
+                return [
+                    'id' => $borrowing->id,
+                    'book_title' => $borrowing->book->title,
+                    'due_date' => $borrowing->due_date ? $borrowing->due_date->format('d-m-Y') : null,
+                    'days_overdue' => $borrowing->due_date ? now()->diffInDays($borrowing->due_date, false) * -1 : 0,
+                    'fine_amount' => $borrowing->fine_amount,
+                    'fine_paid' => $borrowing->fine_paid
+                ];
+            });
+
+        if ($overdueBooks->count() > 0) {
+            $details['overdue_books'] = $overdueBooks;
+            $details['total_overdue'] = $overdueBooks->count();
+        }
+
+        // Get books approaching due date
+        $approachingBooks = $this->borrowings()
+            ->where('status', 'borrowed')
+            ->where('due_date', '<=', now()->addDays(2))
+            ->where('due_date', '>', now())
+            ->with('book')
+            ->get()
+            ->map(function($borrowing) {
+                return [
+                    'id' => $borrowing->id,
+                    'book_title' => $borrowing->book->title,
+                    'due_date' => $borrowing->due_date ? $borrowing->due_date->format('d-m-Y') : null,
+                    'days_remaining' => $borrowing->due_date ? now()->diffInDays($borrowing->due_date, false) : 0
+                ];
+            });
+
+        if ($approachingBooks->count() > 0) {
+            $details['approaching_due_books'] = $approachingBooks;
+            $details['total_approaching'] = $approachingBooks->count();
+        }
+
+        // Get all active borrowings
+        $allActive = $this->activeBorrowings()
+            ->with('book')
+            ->get()
+            ->map(function($borrowing) {
+                return [
+                    'id' => $borrowing->id,
+                    'book_title' => $borrowing->book->title,
+                    'status' => $borrowing->status,
+                    'borrow_date' => $borrowing->borrow_date ? $borrowing->borrow_date->format('d-m-Y') : null,
+                    'due_date' => $borrowing->due_date ? $borrowing->due_date->format('d-m-Y') : null,
+                    'is_overdue' => $borrowing->isOverdue(),
+                    'days_remaining' => $borrowing->due_date ? now()->diffInDays($borrowing->due_date, false) : null
+                ];
+            });
+
+        $details['all_active_borrowings'] = $allActive;
+        $details['total_active'] = $allActive->count();
+
+        return $details;
+    }
+
+    // ==================== BOOK-SPECIFIC VALIDATION ====================
+
+    /**
+     * Check if user has unreturned copy of this book
+     */
+    public function hasUnreturnedBook($bookId): bool
     {
         return $this->borrowings()
-            ->with(['book.category'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->where('book_id', $bookId)
+            ->whereIn('status', ['pending', 'approved', 'borrowed', 'late'])
+            ->exists();
     }
 
     /**
-     * Get user's current borrowings
+     * Get last borrowing of this book
      */
-    public function currentBorrowings()
+    public function getLastBorrowingOfBook($bookId)
     {
-        return $this->activeBorrowings()
-            ->with(['book.category'])
-            ->orderBy('due_date', 'asc')
-            ->get();
+        return $this->borrowings()
+            ->where('book_id', $bookId)
+            ->orderBy('created_at', 'desc')
+            ->first();
     }
 
     /**
-     * Get user's fine history
+     * Complete book borrowing check
      */
-    public function fineHistory()
+    public function canBorrowBook($bookId): array
     {
-        return $this->fines()
-            ->with(['borrowing.book'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        // First, check if user can borrow ANY book
+        $anyBookCheck = $this->canBorrowAnyBook();
+        if (!$anyBookCheck['can_borrow']) {
+            return array_merge($anyBookCheck, [
+                'book_specific' => false,
+                'message' => 'ANDA TIDAK DAPAT MEMINJAM BUKU BARU KARENA MASALAH PEMINJAMAN SAAT INI'
+            ]);
+        }
+
+        // Then check book-specific restrictions
+        $reasons = [];
+        $canBorrow = true;
+
+        // Check if user already has this book
+        if ($this->hasUnreturnedBook($bookId)) {
+            $canBorrow = false;
+            $lastBorrowing = $this->getLastBorrowingOfBook($bookId);
+            $reasons[] = [
+                'type' => 'already_borrowed',
+                'message' => 'Anda masih memiliki buku ini',
+                'detail' => 'Status: ' . ($lastBorrowing ? $lastBorrowing->status : 'N/A')
+            ];
+        }
+
+        // Check if user has borrowed this book before
+        $hasBorrowedBefore = $this->borrowings()
+            ->where('book_id', $bookId)
+            ->exists();
+
+        return [
+            'can_borrow' => $canBorrow,
+            'message' => $canBorrow ? 'Anda dapat meminjam buku ini' : 'Tidak dapat meminjam buku ini',
+            'reasons' => $reasons,
+            'last_borrowing' => $this->hasUnreturnedBook($bookId) ? $this->getLastBorrowingOfBook($bookId) : null,
+            'book_specific' => true,
+            'has_borrowed_before' => $hasBorrowedBefore,
+            'has_unreturned_copy' => $this->hasUnreturnedBook($bookId)
+        ];
     }
+
+    /**
+     * Get user's borrowing status for a specific book
+     */
+    public function getBookBorrowingStatus($bookId): array
+    {
+        $currentBorrowing = $this->getLastBorrowingOfBook($bookId);
+        $hasUnreturned = $this->hasUnreturnedBook($bookId);
+        $hasBorrowedBefore = $this->borrowings()->where('book_id', $bookId)->exists();
+        $canBorrowCheck = $this->canBorrowBook($bookId);
+
+        return [
+            'has_unreturned_copy' => $hasUnreturned,
+            'has_borrowed_before' => $hasBorrowedBefore,
+            'can_borrow' => $canBorrowCheck['can_borrow'],
+            'current_borrowing' => $currentBorrowing ? [
+                'id' => $currentBorrowing->id,
+                'status' => $currentBorrowing->status,
+                'borrow_date' => $currentBorrowing->borrow_date ? $currentBorrowing->borrow_date->format('d-m-Y') : null,
+                'due_date' => $currentBorrowing->due_date ? $currentBorrowing->due_date->format('d-m-Y') : null,
+                'return_date' => $currentBorrowing->return_date ? $currentBorrowing->return_date->format('d-m-Y') : null,
+                'is_overdue' => $currentBorrowing->isOverdue(),
+                'days_overdue' => $currentBorrowing->isOverdue() ?
+                    ($currentBorrowing->due_date ? now()->diffInDays($currentBorrowing->due_date, false) * -1 : 0) : 0
+            ] : null,
+            'total_times_borrowed' => $this->borrowings()->where('book_id', $bookId)->count(),
+            'successful_returns' => $this->borrowings()->where('book_id', $bookId)->where('status', 'returned')->count(),
+            'blocking_issues' => $canBorrowCheck['reasons']
+        ];
+    }
+
+    // ==================== HELPER METHODS ====================
 
     /**
      * Calculate user's statistics
@@ -251,9 +383,33 @@ class User extends Authenticatable
             'active_borrowings' => $this->activeBorrowCount(),
             'total_fines' => $this->fines()->count(),
             'unpaid_fines' => $this->unpaidFines()->count(),
-            'total_fine_amount' => $this->fines()->sum('amount'),
             'unpaid_fine_amount' => $this->getTotalUnpaidFines(),
+            'successful_returns' => $this->returnedBorrowings()->count(),
+            'late_returns' => $this->borrowings()->where('status', 'late')->count(),
+            'pending_requests' => $this->pendingBorrowings()->count(),
         ];
+    }
+
+    /**
+     * Get user's recent borrowing activity
+     */
+    public function getRecentActivity($limit = 10)
+    {
+        return $this->borrowings()
+            ->with('book')
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function($borrowing) {
+                return [
+                    'book_title' => $borrowing->book->title,
+                    'status' => $borrowing->status,
+                    'borrow_date' => $borrowing->borrow_date ? $borrowing->borrow_date->format('d-m-Y') : null,
+                    'due_date' => $borrowing->due_date ? $borrowing->due_date->format('d-m-Y') : null,
+                    'return_date' => $borrowing->return_date ? $borrowing->return_date->format('d-m-Y') : null,
+                    'is_overdue' => $borrowing->isOverdue(),
+                ];
+            });
     }
 
     /**
@@ -261,63 +417,55 @@ class User extends Authenticatable
      */
     public function toApiResponse(): array
     {
+        $borrowStatus = $this->canBorrowAnyBook();
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
+            'role' => $this->role,
             'nim' => $this->nim,
             'phone' => $this->phone,
-            'role' => $this->role,
+            'address' => $this->address,
             'tempat_lahir' => $this->tempat_lahir,
-            'tanggal_lahir' => $this->tanggal_lahir?->format('Y-m-d'),
+            'tanggal_lahir' => $this->tanggal_lahir ? $this->tanggal_lahir->format('Y-m-d') : null,
+            'gender' => $this->gender,
             'agama' => $this->agama,
-            'alamat_asal' => $this->alamat_asal,
-            'alamat_sekarang' => $this->alamat_sekarang,
-            'foto' => $this->foto ? asset('storage/' . $this->foto) : null,
-            'is_anggota' => $this->is_anggota,
-            'is_active' => $this->is_active,
+            'status' => $this->status,
+            'profile_picture' => $this->profile_picture ? asset('storage/' . $this->profile_picture) : null,
+            'email_verified_at' => $this->email_verified_at ? $this->email_verified_at->format('Y-m-d H:i:s') : null,
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
+            'can_borrow_any_book' => $borrowStatus['can_borrow'],
+            'borrow_status' => $borrowStatus,
             'stats' => $this->getStats(),
-            'can_borrow' => $this->canBorrow(),
+            'active_borrowings_count' => $this->activeBorrowCount(),
+            'has_unpaid_fines' => $this->hasUnpaidFines(),
+            'has_late_returns' => $this->hasLateReturns(),
         ];
     }
 
-    /**
-     * Scope for active users
-     */
+    // ==================== SCOPES ====================
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('status', 'ACTIVE');
     }
 
-    /**
-     * Scope for anggota
-     */
-    public function scopeAnggota($query)
+    public function scopePending($query)
     {
-        return $query->where('is_anggota', true);
+        return $query->where('status', 'PENDING');
     }
 
-    /**
-     * Scope for admin users
-     */
     public function scopeAdmin($query)
     {
         return $query->where('role', 'admin');
     }
 
-    /**
-     * Scope for mahasiswa users
-     */
-    public function scopeMahasiswa($query)
+    public function scopeRegular($query)
     {
-        return $query->where('role', 'mahasiswa');
+        return $query->where('role', 'user');
     }
 
-    /**
-     * Search users by name, email, or nim
-     */
     public function scopeSearch($query, $search)
     {
         return $query->where(function($q) use ($search) {

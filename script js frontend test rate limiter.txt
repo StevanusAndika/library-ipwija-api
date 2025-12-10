@@ -1,0 +1,128 @@
+// Test dengan JavaScript di browser console
+async function testRateLimit(url, requests = 70, delay = 100) {
+    console.log(`🚀 Testing rate limit for: ${url}`);
+    console.log(`📊 Making ${requests} requests with ${delay}ms delay`);
+    console.log('='.repeat(50));
+
+    let success = 0;
+    let rateLimited = 0;
+    let errors = 0;
+
+    for (let i = 1; i <= requests; i++) {
+        try {
+            // Tambahkan timeout untuk request
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            // Log raw response untuk debugging
+            console.log(`Request ${i}: Status ${response.status}`);
+
+            if (response.status === 200) {
+                const data = await response.json();
+                success++;
+                const remaining = response.headers.get('X-RateLimit-Remaining') || 'N/A';
+                console.log(`   ✅ OK - Remaining: ${remaining}`);
+            } else if (response.status === 429) {
+                try {
+                    const data = await response.json();
+                    rateLimited++;
+                    console.log(`   🚫 RATE LIMITED`);
+                    console.log(`   ⏳ Retry after: ${data.retry_after || 'N/A'}s`);
+                    console.log(`   📝 Message: ${data.message || 'No message'}`);
+                    break;
+                } catch (e) {
+                    console.log(`   🚫 RATE LIMITED (no JSON body)`);
+                    rateLimited++;
+                    break;
+                }
+            } else if (response.status === 404) {
+                console.error(`   ❌ 404 Not Found - Check your URL!`);
+                console.error(`   Full URL: ${url}`);
+                errors++;
+                break;
+            } else {
+                console.warn(`   ⚠️ Unexpected status: ${response.status}`);
+                errors++;
+            }
+
+            // Delay antara request
+            if (delay > 0 && i < requests) {
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+
+        } catch (error) {
+            console.error(`Request ${i} failed:`, error.name, error.message);
+            errors++;
+
+            if (error.name === 'AbortError') {
+                console.error('   ⏰ Request timeout');
+            }
+        }
+    }
+
+    console.log('\n' + '='.repeat(50));
+    console.log('📊 FINAL RESULTS:');
+    console.log(`✅ Successful requests: ${success}`);
+    console.log(`🚫 Rate limited requests: ${rateLimited}`);
+    console.log(`❌ Errors: ${errors}`);
+    console.log(`🎯 Target: ${requests} requests`);
+
+    return { success, rateLimited, errors };
+}
+
+// Fungsi helper untuk test berbagai endpoint
+async function runAllTests() {
+    const baseUrl = window.location.origin; // Dapatkan base URL dari browser
+
+    const testCases = [
+        {
+            name: 'Public Books API',
+            url: `${baseUrl}/api/books`,
+            requests: 65, // 65 requests untuk test limit 60
+            delay: 50
+        },
+        {
+            name: 'Public Categories API',
+            url: `${baseUrl}/api/categories`,
+            requests: 40,
+            delay: 100
+        },
+        // Tambahkan endpoint yang perlu login untuk test user-specific rate limiting
+    ];
+
+    console.log('🔧 Starting Rate Limit Tests');
+    console.log('Base URL:', baseUrl);
+    console.log('='.repeat(60));
+
+    for (const testCase of testCases) {
+        console.log(`\n🧪 TEST: ${testCase.name}`);
+        console.log(`🔗 URL: ${testCase.url}`);
+        await testRateLimit(testCase.url, testCase.requests, testCase.delay);
+        console.log('='.repeat(60));
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Delay antara test
+    }
+}
+
+// Cara penggunaan:
+// 1. Buka browser ke aplikasi Laravel Anda (localhost:8000)
+// 2. Buka DevTools (F12)
+// 3. Paste kode di atas ke Console
+// 4. Jalankan salah satu:
+
+// Test single endpoint:
+// testRateLimit('http://localhost:8000/api/books', 65, 50);
+
+
+  runAllTests();

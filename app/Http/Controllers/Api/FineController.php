@@ -57,6 +57,7 @@ class FineController extends Controller
         $fines = $query->orderBy('created_at', 'desc')->paginate(10);
 
         $totalUnpaid = $user->getTotalUnpaidFines();
+        $totalPaid = $user->paidFines()->sum('amount');
 
         return response()->json([
             'success' => true,
@@ -64,7 +65,7 @@ class FineController extends Controller
             'data' => [
                 'fines' => $fines,
                 'total_unpaid' => $totalUnpaid,
-                'total_paid' => $user->paidFines()->sum('amount')
+                'total_paid' => $totalPaid
             ]
         ]);
     }

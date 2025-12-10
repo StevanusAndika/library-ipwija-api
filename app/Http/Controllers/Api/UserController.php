@@ -14,6 +14,14 @@ class UserController extends Controller
     // Admin: Get all users
     public function index(Request $request)
     {
+        // TAMBAHKAN PENGEECEKAN ADMIN DI SINI
+        if ($request->user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
         $query = User::query();
 
         // Filter by role
@@ -32,14 +40,14 @@ class UserController extends Controller
             });
         }
 
-        // Filter by membership status
-        if ($request->has('is_anggota')) {
-            $query->where('is_anggota', $request->boolean('is_anggota'));
+        // Filter by status
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
         }
 
-        // Filter by active status
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
+        // Filter by gender
+        if ($request->has('gender')) {
+            $query->where('gender', $request->gender);
         }
 
         // Add statistics
@@ -52,6 +60,11 @@ class UserController extends Controller
         $perPage = $request->get('per_page', 15);
         $users = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
+        // Transform response
+        $users->getCollection()->transform(function ($user) {
+            return $user->toApiResponse();
+        });
+
         return response()->json([
             'success' => true,
             'message' => 'Users retrieved successfully',
@@ -59,8 +72,17 @@ class UserController extends Controller
         ]);
     }
 
+    // TAMBAHKAN JUGA DI METHOD LAIN YANG HARUS ADMIN-ONLY
     public function show($id)
     {
+        // Cek admin
+        if (!auth()->user() || auth()->user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
         $user = User::withCount([
             'borrowings',
             'activeBorrowings',
@@ -92,6 +114,14 @@ class UserController extends Controller
 
     public function update(Request $request, $id)
     {
+        // Cek admin
+        if (!auth()->user() || auth()->user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
         $user = User::find($id);
 
         if (!$user) {
@@ -107,15 +137,14 @@ class UserController extends Controller
             'email' => 'sometimes|email|unique:users,email,' . $id,
             'nim' => 'sometimes|string|unique:users,nim,' . $id,
             'phone' => 'sometimes|string|max:15',
-            'role' => 'sometimes|in:admin,mahasiswa',
+            'role' => 'sometimes|in:admin,user',
             'tempat_lahir' => 'sometimes|string|max:100',
             'tanggal_lahir' => 'sometimes|date',
-            'agama' => 'sometimes|string|max:50',
-            'alamat_asal' => 'sometimes|string|max:500',
-            'alamat_sekarang' => 'sometimes|string|max:500',
-            'foto' => 'sometimes|image|mimes:jpeg,png,jpg|max:2048',
-            'is_anggota' => 'sometimes|boolean',
-            'is_active' => 'sometimes|boolean',
+            'gender' => 'sometimes|in:laki-laki,perempuan',
+            'agama' => 'sometimes|in:ISLAM,KRISTEN,HINDU,BUDDHA,KATOLIK,KONGHUCU',
+            'address' => 'sometimes|string|max:500',
+            'status' => 'sometimes|in:PENDING,ACTIVE,SUSPENDED,INACTIVE',
+            'profile_picture' => 'sometimes|image|mimes:jpeg,png,jpg|max:2048',
             'password' => 'sometimes|string|min:8'
         ]);
 
@@ -127,7 +156,7 @@ class UserController extends Controller
             ], 422);
         }
 
-        $data = $request->except(['foto', 'password']);
+        $data = $request->except(['profile_picture', 'password']);
 
         // Update password if provided
         if ($request->has('password')) {
@@ -135,16 +164,16 @@ class UserController extends Controller
         }
 
         // Handle photo upload
-        if ($request->hasFile('foto')) {
+        if ($request->hasFile('profile_picture')) {
             // Delete old photo if exists
-            if ($user->foto && Storage::disk('public')->exists($user->foto)) {
-                Storage::disk('public')->delete($user->foto);
+            if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
+                Storage::disk('public')->delete($user->profile_picture);
             }
 
-            $foto = $request->file('foto');
+            $foto = $request->file('profile_picture');
             $fotoName = time() . '_' . $user->id . '.' . $foto->getClientOriginalExtension();
             $fotoPath = $foto->storeAs('user_photos', $fotoName, 'public');
-            $data['foto'] = $fotoPath;
+            $data['profile_picture'] = $fotoPath;
         }
 
         $user->update($data);
@@ -158,6 +187,14 @@ class UserController extends Controller
 
     public function destroy($id)
     {
+        // Cek admin
+        if (!auth()->user() || auth()->user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
         $user = User::find($id);
 
         if (!$user) {
@@ -193,8 +230,8 @@ class UserController extends Controller
         }
 
         // Delete user photo if exists
-        if ($user->foto && Storage::disk('public')->exists($user->foto)) {
-            Storage::disk('public')->delete($user->foto);
+        if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
+            Storage::disk('public')->delete($user->profile_picture);
         }
 
         $user->delete();
@@ -207,6 +244,14 @@ class UserController extends Controller
 
     public function toggleStatus($id)
     {
+        // Cek admin
+        if (!auth()->user() || auth()->user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
         $user = User::find($id);
 
         if (!$user) {
@@ -217,51 +262,29 @@ class UserController extends Controller
             ], 404);
         }
 
-        $user->is_active = !$user->is_active;
+        // Toggle between ACTIVE and INACTIVE
+        $user->status = $user->status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
         $user->save();
 
-        $status = $user->is_active ? 'activated' : 'deactivated';
+        $status = $user->status === 'ACTIVE' ? 'activated' : 'deactivated';
 
         return response()->json([
             'success' => true,
             'message' => "User {$status} successfully",
-            'data' => $user
-        ]);
-    }
-
-    public function toggleMembership($id)
-    {
-        $user = User::find($id);
-
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not found',
-                'data' => null
-            ], 404);
-        }
-
-        if ($user->role !== 'mahasiswa') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only mahasiswa can have membership'
-            ], 400);
-        }
-
-        $user->is_anggota = !$user->is_anggota;
-        $user->save();
-
-        $status = $user->is_anggota ? 'granted membership' : 'revoked membership';
-
-        return response()->json([
-            'success' => true,
-            'message' => "User {$status} successfully",
-            'data' => $user
+            'data' => $user->toApiResponse()
         ]);
     }
 
     public function getUserStats($id)
     {
+        // Cek admin
+        if (!auth()->user() || auth()->user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
         $user = User::find($id);
 
         if (!$user) {

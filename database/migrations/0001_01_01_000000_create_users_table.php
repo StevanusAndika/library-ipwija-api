@@ -21,6 +21,7 @@ return new class extends Migration
             $table->text('address')->nullable(true);
             $table->string('tempat_lahir')->nullable(true);
             $table->date('tanggal_lahir')->nullable(true);
+            $table->enum('gender', ['laki-laki', 'perempuan'])->nullable(true);
             $table->enum('agama', ['ISLAM', 'KRISTEN', 'HINDU', 'BUDDHA', 'KATOLIK', 'KONGHUCU'])->nullable(true);
             $table->enum('status', ['PENDING', 'ACTIVE', 'SUSPENDED', 'INACTIVE'])->default('PENDING');
             $table->string('profile_picture')->nullable(true);
@@ -32,10 +33,25 @@ return new class extends Migration
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
-            $table->string('email')->primary();
-            $table->string('token');
+            $table->id();
+            $table->string('email')->index();
+            $table->string('otp'); // Hashed OTP
+            $table->string('token'); // Hashed reset token
+            $table->string('verification_code')->nullable()->unique(); // Plain verification code
+            $table->string('ip_address', 45)->nullable();
+            $table->string('user_agent', 500)->nullable();
+            $table->integer('attempts')->default(0);
+            $table->boolean('is_used')->default(false);
             $table->timestamp('created_at')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamp('verified_at')->nullable();
+            $table->timestamp('used_at')->nullable();
+
+            $table->index(['email', 'verification_code']);
+            $table->index(['email', 'is_used']);
+            $table->index(['expires_at']);
         });
+
 
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();

@@ -26,14 +26,15 @@ class RegisterRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
             'nim' => 'nullable|string|unique:users,nim',
             'phone' => 'nullable|string',
             'address' => 'nullable|string',
             'tempat_lahir' => 'nullable|string',
             'tanggal_lahir' => 'nullable|date',
+            'gender' => 'nullable|in:laki-laki,perempuan',
             'agama' => 'nullable|in:ISLAM,KRISTEN,HINDU,BUDDHA,KATOLIK,KONGHUCU',
             'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'password' => 'required|string|min:8|confirmed',
         ];
     }
 
@@ -44,10 +45,12 @@ class RegisterRequest extends FormRequest
             'email.required' => 'Email wajib diisi',
             'email.email' => 'Format email tidak valid',
             'email.unique' => 'Email sudah terdaftar',
-            'nim.unique' => 'NIM sudah terdaftar',
             'password.required' => 'Password wajib diisi',
             'password.min' => 'Password minimal 8 karakter',
             'password.confirmed' => 'Konfirmasi password tidak sesuai',
+            'nim.unique' => 'NIM sudah terdaftar',
+            'gender.in' => 'Gender harus laki-laki atau perempuan',
+            'agama.in' => 'Agama tidak valid',
         ];
     }
 
