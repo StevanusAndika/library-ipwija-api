@@ -14,11 +14,21 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('email')->unique();
+            $table->string('email')->unique()->nullable(true);
+            $table->enum('role', ['admin', 'user'])->default('user');
+            $table->string('nim')->unique()->nullable(true)->comment('Nomor Induk Mahasiswa, jika user adalah mahasiswa atau dosen. Jika admin maka null');
+            $table->string('phone')->nullable(true);
+            $table->text('address')->nullable(true);
+            $table->string('tempat_lahir')->nullable(true);
+            $table->date('tanggal_lahir')->nullable(true);
+            $table->enum('agama', ['ISLAM', 'KRISTEN', 'HINDU', 'BUDDHA', 'KATOLIK', 'KONGHUCU'])->nullable(true);
+            $table->enum('status', ['PENDING', 'ACTIVE', 'SUSPENDED', 'INACTIVE'])->default('PENDING');
+            $table->string('profile_picture')->nullable(true);
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();
+            $table->timestamp('deleted_at')->nullable();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

@@ -17,22 +17,7 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'nim',
-        'phone',
-        'role',
-        'tempat_lahir',
-        'tanggal_lahir',
-        'agama',
-        'alamat_asal',
-        'alamat_sekarang',
-        'foto',
-        'is_anggota',
-        'is_active',
-    ];
+    protected $guarded = [];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -55,8 +40,6 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'tanggal_lahir' => 'date',
-            'is_anggota' => 'boolean',
-            'is_active' => 'boolean',
         ];
     }
 

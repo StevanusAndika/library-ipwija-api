@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RegisterRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,46 +14,30 @@ use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
+    public function register(RegisterRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'nim' => 'required|string|unique:users',
-            'phone' => 'required|string|max:15',
-            'role' => 'sometimes|in:admin,mahasiswa'
-        ]);
+        try {
+            $data = $request->validated();
+            
+            $data['password'] = Hash::make($data['password']);
+            
+            $data['role'] = $data['role'] ?? 'user';
+            $data['status'] = $data['status'] ?? 'PENDING';
+            
+            $user = User::create($data);
 
-        if ($validator->fails()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Registration successful',
+                'data' => $user
+            ], 201);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors()
-            ], 422);
+                'message' => 'Registration failed',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'nim' => $request->nim,
-            'phone' => $request->phone,
-            'role' => $request->role ?? 'mahasiswa',
-            'is_active' => true,
-            'is_anggota' => false // Default belum anggota
-        ]);
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Registration successful',
-            'data' => [
-                'user' => $user->toApiResponse(),
-                'token' => $token
-            ]
-        ], 201);
     }
 
     public function login(Request $request)
