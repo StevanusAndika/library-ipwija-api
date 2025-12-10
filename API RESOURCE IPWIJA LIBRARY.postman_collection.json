@@ -1,1913 +1,2161 @@
 {
-  "info": {
-    "_postman_id": "80d5d0c0-a174-4c48-95d9-4ab87aabb340",
-    "name": "IPWIJA LIBRARY API RESOURCE",
-    "description": "Untuk menjalankan admin maka jalankan perintah _**php artisan db:seed**_ di terminal lalu akan dapat dummy data, login dengan kredensial dummy data untuk masuk ke admin, lalu lakukan hal yang sama untuk Mahasiswa\n\n**UNTUK Authorization di tab headers didapat dari token admin dan mahasiswa ketika login atau register, Authorization untuk validasi role yang login agar tidak sembarang orang atau tidak memiliki role dapat mengakses menu**",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "37665454"
-  },
-  "item": [
-    {
-      "name": "🔐 AUTHENTICATION",
-      "item": [
-        {
-          "name": "✅ Daftar Pengguna Baru",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code adalah 201\", function() {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "pm.test(\"Response memiliki pesan sukses\", function() {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.message).to.include(\"Pendaftaran berhasil\");",
-                  "});"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\",\n    \"nim\": \"20210001\",\n    \"phone\": \"081234567890\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/register",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "register"
-              ]
-            },
-            "description": "Mendaftarkan pengguna baru. Untuk admin setel role: \"admin\", untuk mahasiswa setel role: \"mahasiswa\""
-          },
-          "response": []
-        },
-        {
-          "name": "Daftar Admin Baru",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"John Admin\",\n    \"email\": \"admin@example.com\",\n    \"password\": \"password1234\",\n    \"password_confirmation\": \"password1234\",\n    \"phone\": \"081234567890\",\n    \"role\": \"admin\",\n    \"nim\": \"ADM011\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/register",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "register"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Login Admin",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"email\": \"superadmin@perpustakaan.com\",\n    \"password\": \"superadmin123\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/login",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "login"
-              ]
-            },
-            "description": "Login dengan akun admin"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Dapatkan Profil",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 2|baaBOwyzq1aAVsnxtz6vCvXloUCUrsgZj91hekAJ346e03c8",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/profile",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "profile"
-              ]
-            },
-            "description": "Dapatkan data pengguna yang sedang login"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Lengkapi Keanggotaan",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 2|QypU6Pmav6DeUbVPSw4y7kxJE8w4UrcYsoGay15P4c7066f1",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "tempat_lahir",
-                  "value": "Jakarta",
-                  "type": "text"
-                },
-                {
-                  "key": "tanggal_lahir",
-                  "value": "2000-01-15",
-                  "type": "text"
-                },
-                {
-                  "key": "agama",
-                  "value": "Islam",
-                  "type": "text"
-                },
-                {
-                  "key": "alamat_asal",
-                  "value": "Jl. Asal No. 123",
-                  "type": "text"
-                },
-                {
-                  "key": "alamat_sekarang",
-                  "value": "Jl. Kos No. 456",
-                  "type": "text"
-                },
-                {
-                  "key": "foto",
-                  "description": "Upload foto (opsional)",
-                  "type": "file",
-                  "src": "/C:/Users/User/Downloads/download.jpeg"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{base_url}}/complete-membership",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "complete-membership"
-              ]
-            },
-            "description": "Lengkapi data keanggotaan perpustakaan (wajib sebelum pinjam buku)"
-          },
-          "response": []
-        },
-        {
-          "name": "Login Mahasiswa",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"email\": \"email_baru@example.com\",\r\n    \"password\": \"newpassword123\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/login",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "login"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Logout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 2|baaBOwyzq1aAVsnxtz6vCvXloUCUrsgZj91hekAJ346e03c8",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/logout",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "logout"
-              ]
-            },
-            "description": "Logout pengguna dan hapus token"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Dapatkan Semua Pengguna",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 5|MVJjCkQOyZ6LbHWR2pYyorzw2At77OiySOwTY7Ld19685465",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/users",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "users"
-              ],
-              "query": [
-                {
-                  "key": "role",
-                  "value": "mahasiswa",
-                  "description": "Filter berdasarkan role: admin/mahasiswa",
-                  "disabled": true
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "is_anggota",
-                  "value": "true",
-                  "disabled": true
-                },
-                {
-                  "key": "per_page",
-                  "value": "15",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Dapatkan semua pengguna (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "Permintaan Lupa Password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"email\": \"jane.smith@example.com\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/forgot-password",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "forgot-password"
-              ]
-            },
-            "description": "Reset password dengan token yang diterima dari email"
-          },
-          "response": []
-        },
-        {
-          "name": "Aksi Reset Password",
-          "protocolProfileBehavior": {
-            "disableBodyPruning": true
-          },
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "GET",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"email\": \"jane.smith@example.com\",\r\n    \"otp\": \"421207\",\r\n    \"reset_token\": \"nsgZqqovdhzxslhGd3MARJmWMMQbwm787APAyPG7MNDgilnlxBFQdnBixdoLkM90\",\r\n    \"password\": \"newpassword123\",\r\n    \"password_confirmation\": \"newpassword123\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/reset-password",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "reset-password"
-              ]
-            }
-          },
-          "response": []
-        }
-      ],
-      "description": "Endpoint untuk autentikasi (daftar, login, profil, logout)"
-    },
-    {
-      "name": "👥 ADMIN - MANAJEMEN PENGGUNA",
-      "item": [
-        {
-          "name": "✅ Dapatkan Detail Pengguna",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/users/6",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "users",
-                "6"
-              ]
-            },
-            "description": "Dapatkan detail pengguna (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Perbarui Pengguna",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"stevanus andika Galih Setiawan\",\n    \"email\": \"email_baru@example.com\",\n    \"phone\": \"089604134028\",\n    \"status\" :\"ACTIVE\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/admin/users/6",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "users",
-                "6"
-              ]
-            },
-            "description": "Perbarui data pengguna (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Hapus Pengguna",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/users/3",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "users",
-                "3"
-              ]
-            },
-            "description": "Hapus pengguna (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "Toggle Status Pengguna",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/users/6/toggle-status",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "users",
-                "6",
-                "toggle-status"
-              ]
-            },
-            "description": "Aktif/nonaktif pengguna (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "Toggle Keanggotaan",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{admin_token}}",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/users/{{user_id}}/toggle-membership",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "users",
-                "{{user_id}}",
-                "toggle-membership"
-              ]
-            },
-            "description": "Berikan/cabut keanggotaan (hanya admin)"
-          },
-          "response": []
-        }
-      ],
-      "description": "Endpoint admin untuk manajemen pengguna"
-    },
-    {
-      "name": "📚 ADMIN - KATEGORI",
-      "item": [
-        {
-          "name": "✅ Dapatkan Semua Kategori",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/categories",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "categories"
-              ],
-              "query": [
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "type",
-                  "value": "umum",
-                  "disabled": true
-                },
-                {
-                  "key": "per_page",
-                  "value": "15",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Dapatkan semua kategori (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Buat Kategori",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"Comic\",\n    \"type\": \"fiksi\",\n    \"description\": \"kumpulan Komik\",\n    \"max_borrow_days\": 7,\n    \"can_borrow\": true,\n    \"is_active\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/admin/categories",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "categories"
-              ]
-            },
-            "description": "Buat kategori baru (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Dapatkan Detail Kategori",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/categories/7",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "categories",
-                "7"
-              ]
-            },
-            "description": "Dapatkan detail kategori dengan statistik"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Perbarui Kategori",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"Komik\",\n    \"type\": \"fiksi\",\n    \"description\": \"kategori untuk komik\",\n    \"max_borrow_days\": 7,\n    \"status\" :1,\n    \"can_borrow\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/admin/categories/7",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "categories",
-                "7"
-              ]
-            },
-            "description": "Perbarui kategori (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Hapus Kategori",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/categories/4",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "categories",
-                "4"
-              ]
-            },
-            "description": "Hapus kategori (hanya admin)"
-          },
-          "response": []
-        }
-      ],
-      "description": "Endpoint admin untuk manajemen kategori buku"
-    },
-    {
-      "name": "📖 ADMIN - BUKU",
-      "item": [
-        {
-          "name": "✅ Dapatkan Semua Buku (Admin)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/books",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "books"
-              ],
-              "query": [
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "category_id",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "book_type",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "is_active",
-                  "value": "true",
-                  "disabled": true
-                },
-                {
-                  "key": "per_page",
-                  "value": "15",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Dapatkan semua buku dengan pagination dan filter (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Buat Buku",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "title",
-                  "value": "One Piece",
-                  "type": "text"
-                },
-                {
-                  "key": "category_id",
-                  "value": "7",
-                  "type": "text"
-                },
-                {
-                  "key": "author",
-                  "value": "Eiichiro Oda",
-                  "type": "text"
-                },
-                {
-                  "key": "publisher",
-                  "value": "PT Elex Media Computindo",
-                  "type": "text"
-                },
-                {
-                  "key": "publication_year",
-                  "value": "2020",
-                  "type": "text"
-                },
-                {
-                  "key": "stock",
-                  "value": "10",
-                  "type": "text"
-                },
-                {
-                  "key": "book_type",
-                  "value": "hardcopy",
-                  "type": "text"
-                },
-                {
-                  "key": "description",
-                  "value": "One Piece bercerita tentang petualangan Monkey D. Luffy...",
-                  "type": "text"
-                },
-                {
-                  "key": "pages",
-                  "value": "200",
-                  "type": "text"
-                },
-                {
-                  "key": "language",
-                  "value": "indonesia",
-                  "type": "text"
-                },
-                {
-                  "key": "status",
-                  "value": "1",
-                  "type": "text"
-                },
-                {
-                  "key": "cover_image",
-                  "type": "file",
-                  "src": "/C:/Users/User/Downloads/download (1).jpeg"
-                },
-                {
-                  "key": "isbn",
-                  "value": "0-2174-2668-9",
-                  "type": "text"
-                },
-                {
-                  "key": "available_stock",
-                  "value": "10",
-                  "type": "text"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{base_url}}/admin/books",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "books"
-              ]
-            },
-            "description": "Buat buku baru (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Dapatkan Detail Buku",
-          "protocolProfileBehavior": {
-            "disableBodyPruning": true
-          },
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/admin/books/1",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "books",
-                "1"
-              ]
-            },
-            "description": "Dapatkan detail buku dengan informasi peminjaman"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Perbarui Buku",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"title\": \"Belajar Laravel 11\",\n    \"author\": \"John Doe Updated\",\n    \"stock\": 15,\n    \"category_id\":1,\n    \"publication_year\":2015,\n    \"publisher\": \"PT Gramedia\",\n    \"book_type\":\"hardcopy\",\n    \"description\": \"Updated description\",\n    \"is_active\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/admin/books/1",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "books",
-                "1"
-              ]
-            },
-            "description": "Perbarui buku (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Hapus Buku",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/books/1",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "books",
-                "1"
-              ]
-            },
-            "description": "Hapus buku (hanya admin)"
-          },
-          "response": []
-        }
-      ],
-      "description": "Endpoint admin untuk manajemen buku"
-    },
-    {
-      "name": "📋 ADMIN - PEMINJAMAN",
-      "item": [
-        {
-          "name": "Ubah status dari belum bayar denda jadi dibayar",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"notes\": \"Denda telah dilunasi\",\r\n    \"payment_method\": \"cash\",\r\n    \"payment_date\": \"2025-12-10\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/admin/fines/2/mark-paid",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "fines",
-                "2",
-                "mark-paid"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Dapatkan Semua Peminjaman",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/borrowings",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "borrowings"
-              ],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "",
-                  "description": "pending/approved/borrowed/late/returned",
-                  "disabled": true
-                },
-                {
-                  "key": "user_id",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "start_date",
-                  "value": "2024-01-01",
-                  "disabled": true
-                },
-                {
-                  "key": "end_date",
-                  "value": "2024-12-31",
-                  "disabled": true
-                },
-                {
-                  "key": "year",
-                  "value": "2024",
-                  "disabled": true
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "per_page",
-                  "value": "15",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Dapatkan semua peminjaman dengan filter (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Setujui Peminjaman",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "http://localhost:8000/api/admin/borrowings/12/approve",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8000",
-              "path": [
-                "api",
-                "admin",
-                "borrowings",
-                "12",
-                "approve"
-              ]
-            },
-            "description": "Setujui peminjaman (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Tolak Peminjaman",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"reason\": \"Ditolak karena stok habis\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/admin/borrowings/8/reject",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "borrowings",
-                "8",
-                "reject"
-              ]
-            },
-            "description": "Tolak peminjaman (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Tandai sebagai Dipinjam",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/borrowings/12/mark-borrowed",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "borrowings",
-                "12",
-                "mark-borrowed"
-              ]
-            },
-            "description": "Tandai buku telah diambil (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Kembalikan Buku",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"return_date\": \"2024-01-20\",\n    \"notes\": \"Buku dikembalikan dalam kondisi baik\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/admin/borrowings/12/return",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "borrowings",
-                "12",
-                "return"
-              ]
-            },
-            "description": "Proses pengembalian buku (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Dapatkan Buku yang Sedang Dipinjam",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/currently-borrowed",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "currently-borrowed"
-              ],
-              "query": [
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "per_page",
-                  "value": "15",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Dapatkan buku yang sedang dipinjam (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Dapatkan Pengembalian Terlambat",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/late-returns",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "late-returns"
-              ],
-              "query": [
-                {
-                  "key": "year",
-                  "value": "2024",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Dapatkan data mahasiswa yang telat mengembalikan (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Dapatkan Denda Belum Dibayar",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/unpaid-fines",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "unpaid-fines"
-              ]
-            },
-            "description": "Dapatkan data mahasiswa yang belum membayar denda (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "Hasilkan denda terlambat",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "http://127.0.0.1:8000/api/admin/borrowings/12/generate-fine",
-              "protocol": "http",
-              "host": [
-                "127",
-                "0",
-                "0",
-                "1"
-              ],
-              "port": "8000",
-              "path": [
-                "api",
-                "admin",
-                "borrowings",
-                "12",
-                "generate-fine"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Ubah status denda jika dibayar",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"status\": \"late\",\r\n    \"reason\": \"telat mengembalikan\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "http://127.0.0.1:8000/api/admin/borrowings/12/update-status",
-              "protocol": "http",
-              "host": [
-                "127",
-                "0",
-                "0",
-                "1"
-              ],
-              "port": "8000",
-              "path": [
-                "api",
-                "admin",
-                "borrowings",
-                "12",
-                "update-status"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Ubah Status buku jika setelah dikembalikan dan denda berhasil dibayar",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"status\": \"returned\",\r\n    \"notes\": \"\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "http://127.0.0.1:8000/api/admin/borrowings/12/update-status",
-              "protocol": "http",
-              "host": [
-                "127",
-                "0",
-                "0",
-                "1"
-              ],
-              "port": "8000",
-              "path": [
-                "api",
-                "admin",
-                "borrowings",
-                "12",
-                "update-status"
-              ]
-            }
-          },
-          "response": []
-        }
-      ],
-      "description": "Endpoint admin untuk manajemen peminjaman"
-    },
-    {
-      "name": "📊 ADMIN - DASHBOARD & LAPORAN",
-      "item": [
-        {
-          "name": "✅ Statistik Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 2|YHRlRFGpXJ3HaY9SFnU9sWkgnBKhogSHAt9jjIhdc046a31b",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/dashboard/stats",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "dashboard",
-                "stats"
-              ]
-            },
-            "description": "Dapatkan statistik dashboard (hanya admin)"
-          },
-          "response": []
-        },
-        {
-          "name": "Data Chart Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 2|YHRlRFGpXJ3HaY9SFnU9sWkgnBKhogSHAt9jjIhdc046a31b",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/admin/dashboard/chart-data",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "admin",
-                "dashboard",
-                "chart-data"
-              ],
-              "query": [
-                {
-                  "key": "year",
-                  "value": "2024",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Dapatkan data chart untuk dashboard (hanya admin)"
-          },
-          "response": []
-        }
-      ],
-      "description": "Dashboard admin dan laporan"
-    },
-    {
-      "name": "👨‍🎓 MAHASISWA - BUKU",
-      "item": [
-        {
-          "name": "✅ Dapatkan Buku (Publik)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/books",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "books"
-              ],
-              "query": [
-                {
-                  "key": "title",
-                  "value": "Oshi No Ko",
-                  "description": "Cari berdasarkan judul/penulis",
-                  "disabled": true
-                },
-                {
-                  "key": "category_id",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "book_type",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "language",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "available",
-                  "value": "true",
-                  "disabled": true
-                },
-                {
-                  "key": "per_page",
-                  "value": "12",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Dapatkan semua buku untuk publik (tanpa login). Bisa filter dan search."
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Dapatkan Detail Buku (Publik)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/books/2",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "books",
-                "2"
-              ]
-            },
-            "description": "Dapatkan detail buku untuk publik (tanpa login)"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Dapatkan Kategori (Publik)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/categories",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "categories"
-              ]
-            },
-            "description": "Dapatkan semua kategori untuk publik (tanpa login)"
-          },
-          "response": []
-        },
-        {
-          "name": "Dapatkan Buku berdasarkan Kategori",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/categories/8/books",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "categories",
-                "8",
-                "books"
-              ],
-              "query": [
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "book_type",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "per_page",
-                  "value": "12",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Dapatkan buku berdasarkan kategori tertentu"
-          },
-          "response": []
-        }
-      ],
-      "description": "Endpoint publik untuk buku dan kategori (tanpa login)"
-    },
-    {
-      "name": "👨‍🎓 MAHASISWA - PEMINJAMAN",
-      "item": [
-        {
-          "name": "✅ Ajukan Peminjaman",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 3|hUP4XlaDiHbwuicJl1XuiAcEC8yCZwhgo7VEZzrKfab166c5",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"book_id\":3,\n    \"borrow_date\": \"2025-12-10\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/borrowings",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "borrowings"
-              ]
-            },
-            "description": "Ajukan peminjaman buku. Maksimal 2 buku, tidak boleh kategori penelitian"
-          },
-          "response": []
-        },
-        {
-          "name": "✅ Dapatkan Peminjaman Saya",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer 3|hUP4XlaDiHbwuicJl1XuiAcEC8yCZwhgo7VEZzrKfab166c5",
-                "type": "text"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/my-borrowings",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "my-borrowings"
-              ],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "",
-                  "description": "Filter berdasarkan status",
-                  "disabled": true
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Dapatkan daftar peminjaman saya"
-          },
-          "response": []
-        }
-      ],
-      "description": "Endpoint mahasiswa untuk peminjaman buku"
-    }
-  ]
+	"info": {
+		"_postman_id": "80d5d0c0-a174-4c48-95d9-4ab87aabb340",
+		"name": "API RESOURCE IPWIJA LIBRARY",
+		"description": "Untuk menjalankan admin maka jalankan perintah _**php artisan db:seed**_ _di terminal lalu akan dapat dummy data ,login dengan kredensial dummy data untuk masuk ke admin,lalu lakukan hal yang sama untuk Mahasiswa_\n\n**UNTUK Authorization di tab headers didapat dari token admin dan mahasiswa ketika login atau register, Authorization untuk validasi role yg login agar tidak sembarang orang atau tidak memiliki role dapat mengakses menu**",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "37665454"
+	},
+	"item": [
+		{
+			"name": "🔐 AUTHENTICATION",
+			"item": [
+				{
+					"name": "✅ Register User Baru",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function() {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response has success message\", function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include(\"Registration successful\");",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\",\n    \"nim\": \"20210001\",\n    \"phone\": \"081234567890\"\n   \n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"register"
+							]
+						},
+						"description": "Register user baru. Untuk admin set role: \"admin\", untuk mahasiswa set role: \"mahasiswa\""
+					},
+					"response": []
+				},
+				{
+					"name": "Register admin baru",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Admin\",\n    \"email\": \"admin@example.com\",\n    \"password\": \"password1234\",\n    \"password_confirmation\": \"password1234\",\n    \"phone\": \"081234567890\",\n    \"role\": \"admin\",\n    \"nim\": \"ADM011\"\n    \n   \n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Admin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"superadmin@perpustakaan.com\",\n    \"password\": \"superadmin123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"login"
+							]
+						},
+						"description": "Login dengan akun mahasiswa"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 2|baaBOwyzq1aAVsnxtz6vCvXloUCUrsgZj91hekAJ346e03c8",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"profile"
+							]
+						},
+						"description": "Get data user yang sedang login"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Complete Membership",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 2|QypU6Pmav6DeUbVPSw4y7kxJE8w4UrcYsoGay15P4c7066f1",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "tempat_lahir",
+									"value": "Jakarta",
+									"type": "text"
+								},
+								{
+									"key": "tanggal_lahir",
+									"value": "2000-01-15",
+									"type": "text"
+								},
+								{
+									"key": "agama",
+									"value": "Islam",
+									"type": "text"
+								},
+								{
+									"key": "alamat_asal",
+									"value": "Jl. Asal No. 123",
+									"type": "text"
+								},
+								{
+									"key": "alamat_sekarang",
+									"value": "Jl. Kos No. 456",
+									"type": "text"
+								},
+								{
+									"key": "foto",
+									"description": "Upload foto (optional)",
+									"type": "file",
+									"src": "/C:/Users/User/Downloads/download.jpeg"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/complete-membership",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"complete-membership"
+							]
+						},
+						"description": "Lengkapi data keanggotaan perpustakaan (wajib sebelum pinjam buku)"
+					},
+					"response": []
+				},
+				{
+					"name": "Login Mahasiswa",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"email_baru@example.com\",\r\n    \"password\": \"newpassword123\"\r\n\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 2|baaBOwyzq1aAVsnxtz6vCvXloUCUrsgZj91hekAJ346e03c8",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"logout"
+							]
+						},
+						"description": "Logout user dan hapus token"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 5|MVJjCkQOyZ6LbHWR2pYyorzw2At77OiySOwTY7Ld19685465",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"users"
+							],
+							"query": [
+								{
+									"key": "role",
+									"value": "mahasiswa",
+									"description": "Filter by role: admin/mahasiswa",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "is_anggota",
+									"value": "true",
+									"disabled": true
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get semua users (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot password request token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"jane.smith@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/forgot-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"forgot-password"
+							]
+						},
+						"description": "Reset password dengan token yang diterima dari email"
+					},
+					"response": []
+				},
+				{
+					"name": "Reset password action",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"jane.smith@example.com\",\r\n    \"otp\": \"421207\",\r\n    \"reset_token\": \"nsgZqqovdhzxslhGd3MARJmWMMQbwm787APAyPG7MNDgilnlxBFQdnBixdoLkM90\",\r\n    \"password\": \"newpassword123\",\r\n    \"password_confirmation\": \"newpassword123\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/reset-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reset-password"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints untuk autentikasi (register, login, profile, logout)"
+		},
+		{
+			"name": "👥 ADMIN - USER MANAGEMENT",
+			"item": [
+				{
+					"name": "✅ Get User Detail",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/users/6",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"6"
+							]
+						},
+						"description": "Get detail user (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"stevanus andika Galih Setiawan\",\n    \"email\": \"email_baru@example.com\",\n    \n    \"phone\": \"089604134028\",\n    \n    \"status\" :\"ACTIVE\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/users/6",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"6"
+							]
+						},
+						"description": "Update data user (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/users/3",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"3"
+							]
+						},
+						"description": "Delete user (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Toggle User Status",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/users/6/toggle-status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"6",
+								"toggle-status"
+							]
+						},
+						"description": "Aktif/nonaktif user (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Toggle Membership",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/users/{{user_id}}/toggle-membership",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"users",
+								"{{user_id}}",
+								"toggle-membership"
+							]
+						},
+						"description": "Grant/revoke membership (admin only)"
+					},
+					"response": []
+				}
+			],
+			"description": "Admin endpoints untuk manajemen user"
+		},
+		{
+			"name": "📚 ADMIN - CATEGORIES",
+			"item": [
+				{
+					"name": "✅ Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/categories",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"categories"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "type",
+									"value": "umum",
+									"disabled": true
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get semua kategori (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Create Category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Comic\",\n    \"type\": \"fiksi\",\n    \"description\": \"kumpulan Komik  \",\n    \"max_borrow_days\": 7,\n    \"can_borrow\": true,\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/categories",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"categories"
+							]
+						},
+						"description": "Create kategori baru (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Get Category Detail",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/categories/7",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"categories",
+								"7"
+							]
+						},
+						"description": "Get detail kategori dengan statistik"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Update Category",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Komik\",\n    \"type\": \"fiksi\",\n    \"description\": \"kategori untuk komik\",\n    \"max_borrow_days\": 7,\n    \"status\" :1,\n    \"can_borrow\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/categories/7",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"categories",
+								"7"
+							]
+						},
+						"description": "Update kategori (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/categories/4",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"categories",
+								"4"
+							]
+						},
+						"description": "Delete kategori (admin only)"
+					},
+					"response": []
+				}
+			],
+			"description": "Admin endpoints untuk manajemen kategori buku"
+		},
+		{
+			"name": "📖 ADMIN - BOOKS",
+			"item": [
+				{
+					"name": "✅ Get All Books (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/books",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"books"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "category_id",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "book_type",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "is_active",
+									"value": "true",
+									"disabled": true
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get semua buku dengan pagination dan filter (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Create Book",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "One Piece ",
+									"type": "text"
+								},
+								{
+									"key": "category_id",
+									"value": "7",
+									"type": "text"
+								},
+								{
+									"key": "author",
+									"value": " Eiichiro Oda",
+									"type": "text"
+								},
+								{
+									"key": "publisher",
+									"value": "PT Elex Media Computindo",
+									"type": "text"
+								},
+								{
+									"key": "publication_year",
+									"value": "2020",
+									"type": "text"
+								},
+								{
+									"key": "stock",
+									"value": "10",
+									"type": "text"
+								},
+								{
+									"key": "book_type",
+									"value": "hardcopy",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "One Piece bercerita tentang petualangan Monkey D. Luffy, pemuda dengan tubuh karet setelah tak sengaja memakan Buah Iblis, yang berlayar bersama kru Bajak Laut Topi Jerami (Zoro, Nami, Usopp, Sanji, dll.) di lautan luas Grand Line untuk menemukan harta karun legendaris \"One Piece\" milik Raja Bajak Laut Gol D. Roger, dengan tujuan Luffy menjadi Raja Bajak Laut selanjutnya, mengedepankan persahabatan, kerja sama tim, dan perjuangan tanpa henti. ",
+									"type": "text"
+								},
+								{
+									"key": "pages",
+									"value": "200",
+									"type": "text"
+								},
+								{
+									"key": "language",
+									"value": "indonesia",
+									"type": "text"
+								},
+								{
+									"key": "status",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "cover_image",
+									"type": "file",
+									"src": "/C:/Users/User/Downloads/download (1).jpeg"
+								},
+								{
+									"key": "isbn",
+									"value": "0-2174-2668-9",
+									"type": "text"
+								},
+								{
+									"key": "available_stock",
+									"value": "10",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/books",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"books"
+							]
+						},
+						"description": "Create buku baru (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Get Book Detail",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/books/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"books",
+								"1"
+							]
+						},
+						"description": "Get detail buku dengan informasi peminjaman"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Update Book",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Belajar Laravel 11 \",\n    \"author\": \"John Doe Updated\",\n    \"stock\": 15,\n    \"category_id\":1,\n    \"publication_year\":2015,\n    \"publisher\": \"PT Gramedia\",\n    \"book_type\":\"hardcopy\",\n    \"description\": \"Updated description\",\n    \"is_active\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/books/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"books",
+								"1"
+							]
+						},
+						"description": "Update buku (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Delete Book",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 1|zrAzMm94WxZTYnM2efalD3gurOLjzCLWY8AmfE9x26c62c46",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/books/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"books",
+								"1"
+							]
+						},
+						"description": "Delete buku (admin only)"
+					},
+					"response": []
+				}
+			],
+			"description": "Admin endpoints untuk manajemen buku"
+		},
+		{
+			"name": "📋 ADMIN - BORROWINGS",
+			"item": [
+				{
+					"name": "Ubah status dari belum bayar denda jadi paid",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"notes\": \"Denda telah dilunasi\",\r\n    \"payment_method\": \"cash\",\r\n    \"payment_date\": \"2025-12-10\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/fines/2/mark-paid",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"fines",
+								"2",
+								"mark-paid"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Get All Borrowings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/borrowings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"borrowings"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "",
+									"description": "pending/approved/borrowed/late/returned",
+									"disabled": true
+								},
+								{
+									"key": "user_id",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "start_date",
+									"value": "2024-01-01",
+									"disabled": true
+								},
+								{
+									"key": "end_date",
+									"value": "2024-12-31",
+									"disabled": true
+								},
+								{
+									"key": "year",
+									"value": "2024",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get semua peminjaman dengan filter (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Approve Borrowing",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8000/api/admin/borrowings/12/approve",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"admin",
+								"borrowings",
+								"12",
+								"approve"
+							]
+						},
+						"description": "Approve peminjaman (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Reject Borrowing",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reason\": \"Ditolak karena stok habis\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/borrowings/8/reject",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"borrowings",
+								"8",
+								"reject"
+							]
+						},
+						"description": "Reject peminjaman (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Mark as Borrowed",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/borrowings/12/mark-borrowed",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"borrowings",
+								"12",
+								"mark-borrowed"
+							]
+						},
+						"description": "Mark buku telah diambil (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Return Book",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"return_date\": \"2024-01-20\",\n    \"notes\": \"Buku dikembalikan dalam kondisi baik\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/borrowings/12/return",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"borrowings",
+								"12",
+								"return"
+							]
+						},
+						"description": "Proses pengembalian buku (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Get Currently Borrowed",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/currently-borrowed",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"currently-borrowed"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get buku yang sedang dipinjam (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Get Late Returns",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": " Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/late-returns",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"late-returns"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2024",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get data mahasiswa yang telat mengembalikan (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Get Unpaid Fines",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/unpaid-fines",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"unpaid-fines"
+							]
+						},
+						"description": "Get data mahasiswa yang belum membayar denda (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "generate denda terlambat",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/admin/borrowings/12/generate-fine",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"admin",
+								"borrowings",
+								"12",
+								"generate-fine"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "ubah status denda jika dibayar",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"status\": \"late\",\r\n    \"reason\": \"telat mengembalikan\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/admin/borrowings/12/update-status",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"admin",
+								"borrowings",
+								"12",
+								"update-status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ubah Status buku jika setelah dikembalikan dan denda berhasil dibayar",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": " Bearer 4|8M3dyo77rBuFRf5VYelWrjficoVDRWlj4V0fB3aO3ac22229",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"status\": \"returned\",\r\n    \"notes\": \"\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/admin/borrowings/12/update-status",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"admin",
+								"borrowings",
+								"12",
+								"update-status"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Admin endpoints untuk manajemen peminjaman"
+		},
+		{
+			"name": "📊 ADMIN - DASHBOARD & REPORTS",
+			"item": [
+				{
+					"name": "✅ Dashboard Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 2|YHRlRFGpXJ3HaY9SFnU9sWkgnBKhogSHAt9jjIhdc046a31b",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/dashboard/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"dashboard",
+								"stats"
+							]
+						},
+						"description": "Get dashboard statistics (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Dashboard Chart Data",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": " Bearer 2|YHRlRFGpXJ3HaY9SFnU9sWkgnBKhogSHAt9jjIhdc046a31b",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/dashboard/chart-data",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"dashboard",
+								"chart-data"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2024",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get chart data for dashboard (admin only)"
+					},
+					"response": []
+				}
+			],
+			"description": "Admin dashboard dan reports"
+		},
+		{
+			"name": "👨‍🎓 MAHASISWA - BOOKS",
+			"item": [
+				{
+					"name": "✅ Get Books (Public)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/books",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"books"
+							],
+							"query": [
+								{
+									"key": "title",
+									"value": "Oshi No Ko",
+									"description": "Search by title/author",
+									"disabled": true
+								},
+								{
+									"key": "category_id",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "book_type",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "language",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "available",
+									"value": "true",
+									"disabled": true
+								},
+								{
+									"key": "per_page",
+									"value": "12",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get semua buku untuk public (tanpa login). Bisa filter dan search."
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Get Book Detail (Public)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/books/2",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"books",
+								"2"
+							]
+						},
+						"description": "Get detail buku untuk public (tanpa login)"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Get Categories (Public)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/categories",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories"
+							]
+						},
+						"description": "Get semua kategori untuk public (tanpa login)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Books by Category",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/categories/8/books",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"categories",
+								"8",
+								"books"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "book_type",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "per_page",
+									"value": "12",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get books by specific category"
+					},
+					"response": []
+				}
+			],
+			"description": "Public endpoints untuk buku dan kategori (tanpa login)"
+		},
+		{
+			"name": "👨‍🎓 MAHASISWA - BORROWINGS",
+			"item": [
+				{
+					"name": "✅ Request Borrowing",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 3|hUP4XlaDiHbwuicJl1XuiAcEC8yCZwhgo7VEZzrKfab166c5",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"book_id\":3,\n    \"borrow_date\": \"2025-12-10\"\n   \n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/borrowings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"borrowings"
+							]
+						},
+						"description": "Ajukan peminjaman buku. Maksimal 2 buku, tidak boleh kategori penelitian"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Get My Borrowings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 3|hUP4XlaDiHbwuicJl1XuiAcEC8yCZwhgo7VEZzrKfab166c5",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/my-borrowings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"my-borrowings"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status",
+									"disabled": true
+								},
+								{
+									"key": "active",
+									"value": "true",
+									"description": "Get active borrowings only",
+									"disabled": true
+								},
+								{
+									"key": "per_page",
+									"value": "10",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get riwayat peminjaman mahasiswa"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Borrowing History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 3|hUP4XlaDiHbwuicJl1XuiAcEC8yCZwhgo7VEZzrKfab166c5",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/books/2/check-borrow-status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"books",
+								"2",
+								"check-borrow-status"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "10",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get history peminjaman yang sudah dikembalikan"
+					},
+					"response": []
+				},
+				{
+					"name": "✅ Request Extension",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 3|hUP4XlaDiHbwuicJl1XuiAcEC8yCZwhgo7VEZzrKfab166c5",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/borrowings/12/extend",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"borrowings",
+								"12",
+								"extend"
+							]
+						},
+						"description": "Ajukan perpanjangan peminjaman (hanya bisa 1x)"
+					},
+					"response": []
+				}
+			],
+			"description": "Mahasiswa endpoints untuk peminjaman buku"
+		},
+		{
+			"name": "👨‍🎓 MAHASISWA - FINES",
+			"item": [
+				{
+					"name": "✅ Get My Fines",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 3|hUP4XlaDiHbwuicJl1XuiAcEC8yCZwhgo7VEZzrKfab166c5",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/my-fines",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"my-fines"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "unpaid",
+									"disabled": true
+								},
+								{
+									"key": "per_page",
+									"value": "10",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get denda mahasiswa yang sedang login"
+					},
+					"response": []
+				}
+			],
+			"description": "Mahasiswa endpoints untuk denda"
+		},
+		{
+			"name": "👨‍🎓 MAHASISWA - EBOOK",
+			"item": [
+				{
+					"name": "✅ Download Ebook",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{mahasiswa_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/books/3/download",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"books",
+								"3",
+								"download"
+							]
+						},
+						"description": "Download ebook (jika tipe buku adalah softcopy)"
+					},
+					"response": []
+				}
+			],
+			"description": "Mahasiswa endpoints untuk ebook download"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Pre-request script untuk set base URL jika belum ada",
+					"if (!pm.collectionVariables.get('base_url')) {",
+					"    pm.collectionVariables.set('base_url', 'http://127.0.0.1:8000/api');",
+					"}",
+					"",
+					"// Log variables untuk debugging",
+					"console.log('Base URL:', pm.collectionVariables.get('base_url'));",
+					"console.log('Admin Token:', pm.collectionVariables.get('admin_token') ? 'Set' : 'Not set');",
+					"console.log('Mahasiswa Token:', pm.collectionVariables.get('mahasiswa_token') ? 'Set' : 'Not set');"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test script",
+					"pm.test(\"Response time is less than 2000ms\", function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+					"});",
+					"",
+					"pm.test(\"Status code is success\", function () {",
+					"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+					"});",
+					"",
+					"// Check if response has JSON content type",
+					"if (pm.response.headers.get(\"Content-Type\") && pm.response.headers.get(\"Content-Type\").includes(\"application/json\")) {",
+					"    pm.test(\"Response has JSON body\", function () {",
+					"        pm.response.to.have.jsonBody();",
+					"    });",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://127.0.0.1:8000/api",
+			"type": "string"
+		},
+		{
+			"key": "admin_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "mahasiswa_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "admin_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "mahasiswa_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "book_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "category_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "borrowing_id",
+			"value": "1",
+			"type": "string"
+		}
+	]
 }
