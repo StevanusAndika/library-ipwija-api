@@ -11,6 +11,7 @@ class CorsMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $allowedOrigins = [
+            // '*',
             'http://localhost:3000',
             'http://localhost:5173',
             'http://localhost:8080',

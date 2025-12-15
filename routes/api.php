@@ -29,7 +29,7 @@ Route::get('/', function () {
     ]);
 });
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
@@ -41,6 +41,15 @@ Route::get('/books/{id}', [BookController::class, 'showPublic']);
 Route::get('/categories', [CategoryController::class, 'indexPublic']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
 Route::get('/categories/{id}/books', [CategoryController::class, 'booksByCategory']);
+
+// ==================== PROTECTED ROUTES (JWT) ====================
+Route::middleware('auth:api')->group(function () {
+    Route::get('/me', [AuthController::class, 'me']);
+    
+    Route::middleware('user')->group(function () {
+        Route::get('/check-uncomplete-data', [UserController::class, 'check_uncomplete_data']);
+    });
+});
 
 // ==================== AUTHENTICATED ROUTES ====================
 Route::middleware('auth:sanctum')->group(function () {

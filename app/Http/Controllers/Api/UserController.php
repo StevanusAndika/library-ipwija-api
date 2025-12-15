@@ -5,13 +5,49 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
-    // Admin: Get all users
+
+    public function check_uncomplete_data()
+    {
+        try {
+            $user = Auth::user();
+
+            $missingFields = [];
+            if (!$user->nim) $missingFields[] = 'nim';
+            if (!$user->phone) $missingFields[] = 'phone';
+            if (!$user->alamat_asal && !$user->alamat_sekarang) $missingFields[] = 'alamat';
+            if (!$user->tempat_lahir) $missingFields[] = 'tempat_lahir';
+            if (!$user->tanggal_lahir) $missingFields[] = 'tanggal_lahir';
+            if (!$user->agama) $missingFields[] = 'agama';
+
+            if (count($missingFields) > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Lengkapi data-data berikut untuk menjadi anggota perpustakaan',
+                    'data' => $missingFields
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Membership status set to complete',
+                'data' => $user
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to check membership status',
+                'error' => $e->getMessage()
+            ], 500);
+        }    
+    }
+
     public function index(Request $request)
     {
         $query = User::query();
@@ -169,7 +205,7 @@ class UserController extends Controller
         }
 
         // Prevent admin from deleting themselves
-        if ($user->id === auth()->id()) {
+        if ($user->id === Auth::user()->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'You cannot delete your own account'

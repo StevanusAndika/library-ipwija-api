@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
@@ -25,6 +27,8 @@ class AuthController extends Controller
             $data['status'] = $data['status'] ?? 'PENDING';
             
             $user = User::create($data);
+
+            $user = $user->fresh();
 
             return response()->json([
                 'success' => true,
@@ -42,45 +46,80 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email',
-            'password' => 'required|string'
-        ]);
+        try {
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|string',
+                'password' => 'required|string'
+            ]);
 
-        if ($validator->fails()) {
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $identifier = $request->input('email');
+            $isEmail = filter_var($identifier, FILTER_VALIDATE_EMAIL) !== false;
+
+            $credentials = $isEmail
+                ? ['email' => $identifier, 'password' => $request->password]
+                : ['nim' => $identifier, 'password' => $request->password];
+
+            $login = JWTAuth::attempt($credentials);
+
+            if (!$login) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid credentials'
+                ], 401);
+            }
+
+            $user = $isEmail
+                ? User::where('email', $identifier)->firstOrFail()
+                : User::where('nim', $identifier)->firstOrFail();
+
+            if (in_array($user->status, ['SUSPENDED', 'INACTIVE'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account is deactivated'
+                ], 403);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Login successful',
+                'data' => [
+                    'user' => $user,
+                    'token' => $login,
+                    'expires_in' => config('jwt.ttl') * 60,
+                ]
+            ]);
+        } catch (JWTException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        if (!Auth::attempt($request->only('email', 'password'))) {
+                'message' => 'Could not create token',
+                'error' => $e->getMessage()
+            ], 500);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid credentials'
-            ], 401);
+                'message' => 'Login failed',
+                'error' => $e->getMessage()
+            ], 500);
         }
+    }
 
-        $user = User::where('email', $request->email)->firstOrFail();
-
-        // Check if user is active
-        if (!$user->is_active) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your account is deactivated'
-            ], 403);
-        }
-
-        $token = $user->createToken('auth_token')->plainTextToken;
+    // Get current session
+    public function me()
+    {
+        $user = Auth::user();
 
         return response()->json([
             'success' => true,
-            'message' => 'Login successful',
-            'data' => [
-                'user' => $user->toApiResponse(),
-                'token' => $token
-            ]
+            'message' => 'User retrieved successfully',
+            'data' => $user
         ]);
     }
 
@@ -95,13 +134,31 @@ class AuthController extends Controller
         ]);
     }
 
-    public function logout(Request $request)
+    public function logout()
     {
-        $request->user()->currentAccessToken()->delete();
-        return response()->json([
-            'success' => true,
-            'message' => 'Logout successful'
-        ]);
+        try {
+            $removeToken = JWTAuth::invalidate(JWTAuth::getToken());
+
+            if($removeToken) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Logout Berhasil!',  
+                ]);
+            }
+
+            Auth::logout();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Logout successful'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Logout failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function forgotPassword(Request $request)
