@@ -20,10 +20,10 @@ class AdminMiddleware
 
         $user = Auth::user();
 
-        if (!$user->isAdmin()) {
+        if (!$user->role || $user->role != 'admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'Forbidden. Admin access only.'
+                'message' => 'Access Forbidden.'
             ], 403);
         }
 

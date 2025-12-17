@@ -44,7 +44,14 @@ Route::get('/categories/{id}/books', [CategoryController::class, 'booksByCategor
 
 // ==================== PROTECTED ROUTES (JWT) ====================
 Route::middleware('auth:api')->group(function () {
-    Route::get('/me', [AuthController::class, 'me']);
+    Route::prefix('profile')->group(function () {
+        Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/update/{id?}', [UserController::class, 'update']);
+    });
+
+    Route::middleware('user')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'dashboard_user']);
+    });
     
     Route::middleware('user')->group(function () {
         Route::get('/check-uncomplete-data', [UserController::class, 'check_uncomplete_data']);

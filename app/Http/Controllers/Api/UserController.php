@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateUserRequest;
+use App\Http\Requests\ChangeUserStatusRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
@@ -46,6 +47,45 @@ class UserController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }    
+    }
+
+    // Hanya boleh diakses oleh admin
+    public function change_status_user(ChangeUserStatusRequest $request)
+    {
+        try {
+            $user = Auth::user();
+            $id_user = $request->input('user_id');
+
+            if ($user->id == $id_user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak dapat mengubah status diri sendiri.'
+                ], 403);
+            }
+
+            $targetUser = User::find($id_user);
+            if (!$targetUser) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User tidak ditemukan.'
+                ], 404);
+            }
+
+            $targetUser->status = $request->input('status');
+            $targetUser->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User status updated successfully',
+                'data' => $targetUser
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update user status',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function index(Request $request)
@@ -126,8 +166,11 @@ class UserController extends Controller
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateUserRequest $request, $id = null)
     {
+        if (!$id) {
+            $id = Auth::user()->id;
+        }
         $user = User::find($id);
 
         if (!$user) {
@@ -138,31 +181,6 @@ class UserController extends Controller
             ], 404);
         }
 
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,' . $id,
-            'nim' => 'sometimes|string|unique:users,nim,' . $id,
-            'phone' => 'sometimes|string|max:15',
-            'role' => 'sometimes|in:admin,mahasiswa',
-            'tempat_lahir' => 'sometimes|string|max:100',
-            'tanggal_lahir' => 'sometimes|date',
-            'agama' => 'sometimes|string|max:50',
-            'alamat_asal' => 'sometimes|string|max:500',
-            'alamat_sekarang' => 'sometimes|string|max:500',
-            'foto' => 'sometimes|image|mimes:jpeg,png,jpg|max:2048',
-            'is_anggota' => 'sometimes|boolean',
-            'is_active' => 'sometimes|boolean',
-            'password' => 'sometimes|string|min:8'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         $data = $request->except(['foto', 'password']);
 
         // Update password if provided
@@ -170,7 +188,6 @@ class UserController extends Controller
             $data['password'] = Hash::make($request->password);
         }
 
-        // Handle photo upload
         if ($request->hasFile('foto')) {
             // Delete old photo if exists
             if ($user->foto && Storage::disk('public')->exists($user->foto)) {
@@ -188,7 +205,7 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User updated successfully',
-            'data' => $user->toApiResponse()
+            'data' => $user
         ]);
     }
 
