@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AddUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Requests\ChangeUserStatusRequest;
+use App\Http\Requests\BatchInsertUsersRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -292,6 +293,163 @@ class UserController extends Controller
             'success' => true,
             'message' => 'User deleted successfully'
         ]);
+    }
+
+    public function batch_insert_users(BatchInsertUsersRequest $request)
+    {
+        try {
+            $file = $request->file('csv_file');
+            $path = $file->getRealPath();
+            
+            $handle = fopen($path, 'r');
+            if (!$handle) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal membuka file CSV'
+                ], 400);
+            }
+
+            $header = fgetcsv($handle, 0, ';'); // Skip header row
+            
+            $chunkSize = 100;
+            $chunk = [];
+            $insertedCount = 0;
+            $skippedCount = 0;
+            $errors = [];
+            $lineNumber = 2; // Start from line 2 (after header)
+
+            while (($row = fgetcsv($handle, 0, ';')) !== false) {
+                // Skip empty rows
+                if (empty(array_filter($row))) {
+                    $lineNumber++;
+                    continue;
+                }
+
+                // Parse CSV data
+                $userData = [
+                    'name' => isset($row[1]) ? trim($row[1]) : null,
+                    'nim' => isset($row[2]) ? trim($row[2]) : null,
+                    'phone' => isset($row[3]) ? trim($row[3]) : null,
+                    'tempat_lahir' => isset($row[4]) ? trim($row[4]) : null,
+                    'tanggal_lahir' => isset($row[5]) ? trim($row[5]) : null,
+                    'agama' => isset($row[6]) ? trim($row[6]) : null,
+                    'address' => isset($row[7]) ? trim($row[7]) : null,
+                    'line_number' => $lineNumber,
+                ];
+
+                if (empty($userData['name'])) {
+                    $skippedCount++;
+                    $errors[] = "Baris {$lineNumber}: Nama tidak boleh kosong";
+                    $lineNumber++;
+                    continue;
+                }
+
+                if (!empty($userData['nim'])) {
+                    $existingNim = User::where('nim', $userData['nim'])->exists();
+                    if ($existingNim) {
+                        $skippedCount++;
+                        $errors[] = "Baris {$lineNumber}: NIM {$userData['nim']} sudah terdaftar, data tidak diinput";
+                        $lineNumber++;
+                        continue;
+                    }
+                }
+
+                // Check for duplicate phone
+                if (!empty($userData['phone'])) {
+                    $existingPhone = User::where('phone', $userData['phone'])->exists();
+                    if ($existingPhone) {
+                        $skippedCount++;
+                        $errors[] = "Baris {$lineNumber}: Nomor telepon {$userData['phone']} sudah terdaftar, data tidak diinput";
+                        $lineNumber++;
+                        continue;
+                    }
+                }
+
+                $chunk[] = $userData;
+                $lineNumber++;
+
+                // Process chunk when it reaches chunkSize or end of file
+                if (count($chunk) >= $chunkSize) {
+                    $insertedCount += $this->processUserChunk($chunk, $errors);
+                    $chunk = [];
+                }
+            }
+
+            // Process remaining data
+            if (!empty($chunk)) {
+                $insertedCount += $this->processUserChunk($chunk, $errors);
+            }
+
+            fclose($handle);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Batch insert users selesai',
+                'data' => [
+                    'inserted' => $insertedCount,
+                    'skipped' => $skippedCount,
+                    'total_processed' => $insertedCount + $skippedCount,
+                ],
+                'errors' => $errors
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal melakukan batch insert users',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Process a chunk of user data
+     */
+    private function processUserChunk(array $chunk, &$errors)
+    {
+        try {
+            $insertedCount = 0;
+
+            DB::transaction(function () use ($chunk, &$insertedCount, &$errors) {
+                foreach ($chunk as $userData) {
+                    try {
+                        // Double check for duplicate (in case of concurrent requests)
+                        if (!empty($userData['nim']) && User::where('nim', $userData['nim'])->exists()) {
+                            $errors[] = "Baris {$userData['line_number']}: NIM {$userData['nim']} sudah terdaftar (double check)";
+                            continue;
+                        }
+
+                        if (!empty($userData['phone']) && User::where('phone', $userData['phone'])->exists()) {
+                            $errors[] = "Baris {$userData['line_number']}: Nomor telepon {$userData['phone']} sudah terdaftar (double check)";
+                            continue;
+                        }
+
+                        // Create user
+                        User::create([
+                            'name' => $userData['name'],
+                            'nim' => $userData['nim'] ?: null,
+                            'phone' => $userData['phone'] ?: null,
+                            'tempat_lahir' => $userData['tempat_lahir'] ?: null,
+                            'tanggal_lahir' => $userData['tanggal_lahir'] ?: null,
+                            'agama' => $userData['agama'] ?: null,
+                            'address' => $userData['address'] ?: null,
+                            'role' => 'user',
+                            'status' => 'PENDING',
+                            'password' => Hash::make($userData['nim']), // Default password
+                        ]);
+
+                        $insertedCount++;
+                    } catch (\Exception $e) {
+                        $errors[] = "Baris {$userData['line_number']}: {$e->getMessage()}";
+                    }
+                }
+            });
+
+            return $insertedCount;
+        } catch (\Exception $e) {
+            $errors[] = "Error saat memproses chunk: {$e->getMessage()}";
+            return 0;
+        }
     }
 
     public function toggleStatus($id)

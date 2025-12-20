@@ -44,7 +44,6 @@ Route::get('/categories/{id}/books', [CategoryController::class, 'booksByCategor
 
 // ==================== PROTECTED ROUTES (JWT) ====================
 Route::middleware('auth:api')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::prefix('profile')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
@@ -65,8 +64,11 @@ Route::middleware('auth:api')->group(function () {
         Route::prefix('/users')->group(function () { 
             Route::get('/', [UserController::class, 'index']);
             Route::post('/', [UserController::class, 'store']);
-            Route::get('/{id}', [UserController::class, 'show']);
+            
+            Route::post('/batch-insert', [UserController::class, 'batch_insert_users']);
             Route::post('/change-status-user', [UserController::class, 'change_status_user']);
+            
+            Route::get('/{id}', [UserController::class, 'show']);
             Route::put('/{id?}', [UserController::class, 'update']);
             Route::delete('/{id}', [UserController::class, 'destroy']);
             // Route::post('/{id}/toggle-status', [UserController::class, 'toggleStatus']);
