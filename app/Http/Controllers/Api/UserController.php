@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AddUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Requests\ChangeUserStatusRequest;
 use App\Models\User;
@@ -10,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -92,30 +94,30 @@ class UserController extends Controller
     {
         $query = User::query();
 
-        // Filter by role
-        if ($request->has('role')) {
-            $query->where('role', $request->role);
-        }
-
-        // Filter by search
+        // Search by name, nim, phone, email
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
                   ->orWhere('nim', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
-        // Filter by membership status
-        if ($request->has('is_anggota')) {
-            $query->where('is_anggota', $request->boolean('is_anggota'));
+        // Filter by role (admin, user)
+        if ($request->has('role') && $request->role !== null) {
+            $query->where('role', $request->role);
         }
 
-        // Filter by active status
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
+        // Filter by agama (religion)
+        if ($request->has('agama') && $request->agama !== null) {
+            $query->where('agama', $request->agama);
+        }
+
+        // Filter by status (PENDING, ACTIVE, SUSPENDED, INACTIVE)
+        if ($request->has('status') && $request->status !== null) {
+            $query->where('status', $request->status);
         }
 
         // Add statistics
@@ -125,14 +127,47 @@ class UserController extends Controller
             'unpaidFines as unpaid_fines_count'
         ]);
 
-        $perPage = $request->get('per_page', 15);
-        $users = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $perPage = $request->get('per_page', 20);
+        $users = $query->orderBy('created_at', 'DESC')->paginate($perPage);
 
         return response()->json([
             'success' => true,
             'message' => 'Users retrieved successfully',
             'data' => $users
         ]);
+    }
+
+    public function store(AddUserRequest $request) 
+    {
+        try {
+            $user = DB::transaction(function () use ($request) {
+                $data = $request->except(['password']);
+                
+                $data['password'] = Hash::make($request->password);
+                
+                if (!isset($data['role'])) {
+                    $data['role'] = 'user';
+                }
+                
+                if (!isset($data['status'])) {
+                    $data['status'] = 'PENDING';
+                }
+                
+                return User::create($data);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User created successfully',
+                'data' => $user
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create user',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function show($id)
@@ -143,12 +178,12 @@ class UserController extends Controller
             'fines',
             'unpaidFines'
         ])->with([
-            'activeBorrowings' => function($query) {
-                $query->with(['book.category'])->limit(5);
-            },
-            'unpaidFines' => function($query) {
-                $query->with(['borrowing.book'])->limit(5);
-            }
+            // 'activeBorrowings' => function($query) {
+            //     $query->with(['book.category'])->limit(5);
+            // },
+            // 'unpaidFines' => function($query) {
+            //     $query->with(['borrowing.book'])->limit(5);
+            // }
         ])->find($id);
 
         if (!$user) {
@@ -162,7 +197,7 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User retrieved successfully',
-            'data' => $user->toApiResponse()
+            'data' => $user
         ]);
     }
 
@@ -205,7 +240,8 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User updated successfully',
-            'data' => $user
+            'data' => $user,
+            'request_data' => $request
         ]);
     }
 

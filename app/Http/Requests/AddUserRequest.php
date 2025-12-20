@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateUserRequest extends FormRequest
+class AddUserRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -21,13 +21,11 @@ class UpdateUserRequest extends FormRequest
      */
     public function rules(): array
     {
-        $userId = $this->route('id') ?? $this->user()->id;
-        
         return [
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|unique:users,email,' . $userId,
+            'email' => 'nullable|email|unique:users,email',
             'role' => 'nullable|in:admin,user',
-            'nim' => 'nullable|string|unique:users,nim,' . $userId,
+            'nim' => 'nullable|string|unique:users,nim',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
             'tempat_lahir' => 'nullable|string|max:255',
@@ -35,16 +33,7 @@ class UpdateUserRequest extends FormRequest
             'agama' => 'nullable|in:ISLAM,KRISTEN,HINDU,BUDDHA,KATOLIK,KONGHUCU',
             'status' => 'nullable|in:PENDING,ACTIVE,SUSPENDED,INACTIVE',
             'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ];
-    }
-
-    public function messages(): array
-    {
-        return [
-            'name.required' => 'Nama harus diisi',
-            'email.email' => 'Email harus valid',
-            'email.unique' => 'Email sudah terdaftar',
-            'nim.unique' => 'NIM sudah terdaftar',
+            'password' => 'required|string|min:8',
         ];
     }
 }

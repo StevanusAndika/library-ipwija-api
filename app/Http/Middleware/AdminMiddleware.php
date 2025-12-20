@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class AdminMiddleware
 {
@@ -27,7 +28,7 @@ class AdminMiddleware
             ], 403);
         }
 
-        if (!$user->is_active) {
+        if (!Str::lower($user->status) == 'active') {
             return response()->json([
                 'success' => false,
                 'message' => 'Your account is deactivated.'

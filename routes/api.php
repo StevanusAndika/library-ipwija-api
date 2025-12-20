@@ -44,6 +44,8 @@ Route::get('/categories/{id}/books', [CategoryController::class, 'booksByCategor
 
 // ==================== PROTECTED ROUTES (JWT) ====================
 Route::middleware('auth:api')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+
     Route::prefix('profile')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/update/{id?}', [UserController::class, 'update']);
@@ -51,49 +53,26 @@ Route::middleware('auth:api')->group(function () {
 
     Route::middleware('user')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'dashboard_user']);
-    });
-    
-    Route::middleware('user')->group(function () {
         Route::get('/check-uncomplete-data', [UserController::class, 'check_uncomplete_data']);
     });
-});
 
-// ==================== AUTHENTICATED ROUTES ====================
-Route::middleware('auth:sanctum')->group(function () {
-    // ========== AUTH ROUTES ==========
-    Route::get('/profile', [AuthController::class, 'profile']);
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::post('/complete-membership', [AuthController::class, 'completeMembership']);
-
-    // ========== MAHASISWA ROUTES ==========
-    Route::middleware('mahasiswa')->group(function () {
-        // Borrowing
-        Route::get('/my-borrowings', [BorrowingController::class, 'myBorrowings']);
-        Route::get('/borrowing-history', [BorrowingController::class, 'borrowingHistory']);
-        Route::post('/borrowings', [BorrowingController::class, 'store']);
-        Route::post('/borrowings/{id}/extend', [BorrowingController::class, 'extend']);
-        Route::get('/check-borrow-status', [BorrowingController::class, 'checkBorrowStatus']);
-        // Fines
-        Route::get('/my-fines', [FineController::class, 'myFines']);
-
-        // Ebook download
-        Route::get('/books/{id}/download', [BookController::class, 'downloadEbook']);
-    });
-
-    // ========== ADMIN ROUTES ==========
     Route::middleware('admin')->prefix('admin')->group(function () {
         // ===== DASHBOARD =====
         Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
         Route::get('/dashboard/chart-data', [DashboardController::class, 'getChartData']);
 
         // ===== USER MANAGEMENT =====
-        Route::get('/users', [UserController::class, 'index']);
-        Route::get('/users/{id}', [UserController::class, 'show']);
-        Route::put('/users/{id}', [UserController::class, 'update']);
-        Route::delete('/users/{id}', [UserController::class, 'destroy']);
-        Route::post('/users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
-        Route::post('/users/{id}/toggle-membership', [UserController::class, 'toggleMembership']);
-        Route::get('/users/{id}/stats', [UserController::class, 'getUserStats']);
+        Route::prefix('/users')->group(function () { 
+            Route::get('/', [UserController::class, 'index']);
+            Route::post('/', [UserController::class, 'store']);
+            Route::get('/{id}', [UserController::class, 'show']);
+            Route::post('/change-status-user', [UserController::class, 'change_status_user']);
+            Route::put('/{id?}', [UserController::class, 'update']);
+            Route::delete('/{id}', [UserController::class, 'destroy']);
+            // Route::post('/{id}/toggle-status', [UserController::class, 'toggleStatus']);
+            Route::post('/{id}/toggle-membership', [UserController::class, 'toggleMembership']);
+            Route::get('/{id}/stats', [UserController::class, 'getUserStats']);
+        });
 
         // ===== CATEGORY MANAGEMENT =====
         Route::get('/categories', [CategoryController::class, 'index']);
@@ -127,6 +106,34 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/fines/{id}/mark-paid', [FineController::class, 'markAsPaid']);
         Route::get('/fines/statistics', [FineController::class, 'statistics']);
     });
+
+    Route::post('/logout', [AuthController::class, 'logout']);
+});
+
+// ==================== AUTHENTICATED ROUTES ====================
+Route::middleware('auth:sanctum')->group(function () {
+    // ========== AUTH ROUTES ==========
+    Route::get('/profile', [AuthController::class, 'profile']);
+    
+    Route::post('/complete-membership', [AuthController::class, 'completeMembership']);
+
+    // ========== MAHASISWA ROUTES ==========
+    Route::middleware('mahasiswa')->group(function () {
+        // Borrowing
+        Route::get('/my-borrowings', [BorrowingController::class, 'myBorrowings']);
+        Route::get('/borrowing-history', [BorrowingController::class, 'borrowingHistory']);
+        Route::post('/borrowings', [BorrowingController::class, 'store']);
+        Route::post('/borrowings/{id}/extend', [BorrowingController::class, 'extend']);
+        Route::get('/check-borrow-status', [BorrowingController::class, 'checkBorrowStatus']);
+        // Fines
+        Route::get('/my-fines', [FineController::class, 'myFines']);
+
+        // Ebook download
+        Route::get('/books/{id}/download', [BookController::class, 'downloadEbook']);
+    });
+
+    // ========== ADMIN ROUTES ==========
+    
 });
 
 // ==================== FALLBACK ROUTE ====================
