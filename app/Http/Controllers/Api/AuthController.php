@@ -115,6 +115,7 @@ class AuthController extends Controller
     public function me()
     {
         $user = Auth::user();
+        $user->profile_picture = $user->profile_picture ? asset('storage/' . $user->profile_picture) : null;
 
         return response()->json([
             'success' => true,

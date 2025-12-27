@@ -224,16 +224,16 @@ class UserController extends Controller
             $data['password'] = Hash::make($request->password);
         }
 
-        if ($request->hasFile('foto')) {
+        if ($request->hasFile('profile_picture')) {
             // Delete old photo if exists
-            if ($user->foto && Storage::disk('public')->exists($user->foto)) {
-                Storage::disk('public')->delete($user->foto);
+            if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
+                Storage::disk('public')->delete($user->profile_picture);
             }
 
-            $foto = $request->file('foto');
-            $fotoName = time() . '_' . $user->id . '.' . $foto->getClientOriginalExtension();
-            $fotoPath = $foto->storeAs('user_photos', $fotoName, 'public');
-            $data['foto'] = $fotoPath;
+            $profile_picture = $request->file('profile_picture');
+            $profilePictureName = time() . '_' . $user->id . '.' . $profile_picture->getClientOriginalExtension();
+            $profilePicturePath = $profile_picture->storeAs('user_photos', $profilePictureName, 'public');
+            $data['profile_picture'] = $profilePicturePath;
         }
 
         $user->update($data);
