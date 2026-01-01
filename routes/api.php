@@ -142,6 +142,7 @@ Route::middleware(['auth:sanctum', 'rate.limit:60,1'])->group(function () {
             Route::post('/borrowings/{id}/update-status', [BorrowingController::class, 'updateStatus']);
             Route::post('/borrowings/{id}/generate-fine', [BorrowingController::class, 'generateFineManually']);
             Route::post('/borrowings/{id}/mark-late', [BorrowingController::class, 'markAsLate']);
+            Route::post('/borrowings/{id}/mark-fine-paid', [BorrowingController::class, 'markFinePaid']);
             Route::post('/fines/{id}/mark-paid', [FineController::class, 'markAsPaid']);
         });
 

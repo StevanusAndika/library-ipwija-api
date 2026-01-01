@@ -1230,6 +1230,54 @@ class BorrowingController extends Controller
     }
 
     /**
+     * Mark fine as paid (admin)
+     */
+    public function markFinePaid($id)
+    {
+        $borrowing = Borrowing::with(['book', 'user'])->find($id);
+
+        if (!$borrowing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Borrowing not found'
+            ], 404);
+        }
+
+        if ($borrowing->status !== 'late') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only late borrowings can have fines marked as paid'
+            ], 400);
+        }
+
+        if (!$borrowing->fine_amount || $borrowing->fine_amount <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No fine amount to pay'
+            ], 400);
+        }
+
+        // Update borrowing fine_paid status
+        $borrowing->fine_paid = true;
+        $borrowing->save();
+
+        // Update the fine record in fines table
+        $fine = \App\Models\Fine::where('borrowing_id', $borrowing->id)
+            ->where('status', '!=', 'paid')
+            ->first();
+
+        if ($fine) {
+            $fine->markAsPaid();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Fine marked as paid',
+            'data' => $borrowing->toApiResponse(true)
+        ]);
+    }
+
+    /**
      * Get borrowing statistics (user)
      */
     public function myStats()
