@@ -38,6 +38,12 @@ class Book extends Model
         'status' => 'integer',
     ];
 
+    // Always include public URLs in JSON responses
+    protected $appends = [
+        'cover_image_url',
+        'ebook_url',
+    ];
+
     // Relationships
     public function category()
     {
