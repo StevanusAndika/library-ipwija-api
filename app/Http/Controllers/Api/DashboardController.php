@@ -11,9 +11,69 @@ use App\Models\Fine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
+    public function dashboard_user()
+    {
+        try {
+            $user = Auth::user();
+
+            // Total books borrowed by the user
+            $totalBorrowed = Borrowing::where('user_id', $user->id)->count();
+
+            // Active borrowings
+            $activeBorrowings = Borrowing::where('user_id', $user->id)
+                ->whereIn('status', ['approved', 'borrowed'])->count();
+
+            // Late borrowings
+            $lateBorrowings = Borrowing::where('user_id', $user->id)
+                ->where('status', 'late')->count();
+
+            // Total fines
+            $totalFines = Fine::where('user_id', $user->id)->sum('amount');
+
+            $checkCompletionData = [];
+            $requiredFields = [
+                'nim' => 'NIM belum diisi',
+                'phone' => 'Nomor telepon belum diisi',
+                'address' => 'Alamat belum diisi',
+                'tempat_lahir' => 'Tempat lahir belum diisi',
+                'agama' => 'Agama belum diisi',
+                'profile_picture' => 'Foto profil belum diisi'
+            ];
+
+            foreach ($requiredFields as $field => $message) {
+                if (empty($user->$field)) {
+                    $checkCompletionData[] = $message;
+                }
+            }
+
+            if (!$user->tanggal_lahir || $user->tanggal_lahir == '0000-00-00') {
+                $checkCompletionData[] = 'Tanggal lahir belum diisi';
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User dashboard statistics retrieved successfully',
+                'data' => [
+                    'total_borrowed' => $totalBorrowed,
+                    'active_borrowings' => $activeBorrowings,
+                    'late_borrowings' => $lateBorrowings,
+                    'total_fines' => $totalFines,
+                    'incomplete_data' => $checkCompletionData,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve user dashboard statistics',
+                'error' => $e->getMessage()
+            ], 500);
+        }   
+    }
+
     public function getStats(Request $request)
     {
         // Total books - GANTI is_active menjadi status (Book sudah ganti)

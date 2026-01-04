@@ -4,12 +4,17 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
 
 class UserMiddleware
 {
-    public function handle(Request $request, Closure $next): Response
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     */
+    public function handle(Request $request, Closure $next)
     {
         if (!Auth::check()) {
             return response()->json([
@@ -20,19 +25,11 @@ class UserMiddleware
 
         $user = Auth::user();
 
-        // FIX: Sesuaikan dengan struktur baru (role 'user' bukan 'mahasiswa')
-        if ($user->role !== 'user') {
+        if($user->role != 'user') 
+        {
             return response()->json([
                 'success' => false,
-                'message' => 'Forbidden. Regular user access only.'
-            ], 403);
-        }
-
-        // FIX: Gunakan status bukan is_active
-        if ($user->status !== 'ACTIVE') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your account is not active. Status: ' . $user->status
+                'message' => 'Unauthorized Access.'
             ], 403);
         }
 

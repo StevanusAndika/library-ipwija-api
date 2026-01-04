@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class AdminMiddleware
 {
@@ -21,16 +22,14 @@ class AdminMiddleware
 
         $user = Auth::user();
 
-        // Cek apakah user adalah admin
-        if (!$user->isAdmin()) {
+        if (!$user->role || $user->role != 'admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'Forbidden. Admin access only.'
+                'message' => 'Access Forbidden.'
             ], 403);
         }
 
-        // FIX: Gunakan status bukan is_active
-        if ($user->status !== 'ACTIVE') {
+        if (!Str::lower($user->status) == 'active') {
             return response()->json([
                 'success' => false,
                 'message' => 'Your account is not active. Status: ' . $user->status

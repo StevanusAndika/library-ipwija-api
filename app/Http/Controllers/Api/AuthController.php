@@ -7,14 +7,14 @@ use App\Http\Requests\RegisterRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use App\Mail\PasswordResetOtpMail;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
@@ -32,6 +32,8 @@ class AuthController extends Controller
 
             $user = User::create($data);
 
+            $user = $user->fresh();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Registration successful',
@@ -47,86 +49,94 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Login user
-     */
-   public function login(Request $request)
-{
-    try {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email',
-            'password' => 'required|string'
-        ]);
+    public function login(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|string',
+                'password' => 'required|string'
+            ]);
 
-        if ($validator->fails()) {
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $identifier = $request->input('email');
+            $isEmail = filter_var($identifier, FILTER_VALIDATE_EMAIL) !== false;
+
+            $credentials = $isEmail
+                ? ['email' => $identifier, 'password' => $request->password]
+                : ['nim' => $identifier, 'password' => $request->password];
+
+            $login = JWTAuth::attempt($credentials);
+
+            if (!$login) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Email/NIM atau Password salah. Silahkan coba lagi.'
+                ], 401);
+            }
+
+            $user = $isEmail
+                ? User::where('email', $identifier)->firstOrFail()
+                : User::where('nim', $identifier)->firstOrFail();
+
+            if (in_array($user->status, ['SUSPENDED', 'INACTIVE'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account is deactivated'
+                ], 403);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Login successful',
+                'data' => [
+                    'user' => $user,
+                    'token' => $login,
+                    'expires_in' => config('jwt.ttl') * 60,
+                ]
+            ]);
+        } catch (JWTException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $email = $request->email;
-        $password = $request->password;
-
-        // Cari user berdasarkan email
-        $user = User::where('email', $email)->first();
-
-        // **PENTING: Cek email dulu**
-        if (!$user) {
+                'message' => 'Could not create token',
+                'error' => $e->getMessage()
+            ], 500);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Email atau password tidak sesuai'
-            ], 401);
+                'message' => 'Login failed',
+                'error' => $e->getMessage()
+            ], 500);
         }
+    }
 
-        // **Cek password**
-        if (!Hash::check($password, $user->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Email atau password tidak sesuai'
-            ], 401);
-        }
-
-        // Cek jika user active
-        if ($user->status !== 'ACTIVE') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Akun Anda tidak aktif. Status: ' . $user->status
-            ], 403);
-        }
-
-        // Create token
-        $token = $user->createToken('auth_token')->plainTextToken;
+    // Get current session
+    public function me()
+    {
+        $user = Auth::user();
+        $user->profile_picture = $user->profile_picture ? asset('storage/' . $user->profile_picture) : null;
 
         // Log login success
-        \Log::info('User logged in successfully', [
+        Log::info('User logged in successfully', [
             'email' => $user->email,
             'role' => $user->role,
-            'ip' => $request->ip()
+            'ip' => request()->ip()
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Login berhasil',
-            'data' => [
-                'user' => $user->toApiResponse(),
-                'token' => $token
-            ]
+            'message' => 'User retrieved successfully',
+            'data' => $user
         ]);
 
-    } catch (\Exception $e) {
-        \Log::error('Login error: ' . $e->getMessage(), [
-            'email' => $request->email ?? 'not provided',
-            'ip' => $request->ip()
-        ]);
+    } 
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Terjadi kesalahan saat login'
-        ], 500);
-    }
-}
     /**
      * Get user profile
      */
@@ -141,20 +151,31 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Logout user
-     */
-    public function logout(Request $request)
+    public function logout()
     {
-        $user = $request->user();
-        $request->user()->currentAccessToken()->delete();
+        try {
+            $removeToken = JWTAuth::invalidate(JWTAuth::getToken());
 
-        Log::info('User logged out', ['email' => $user->email]);
+            if($removeToken) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Logout Berhasil!',  
+                ]);
+            }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Logout successful'
-        ]);
+            Auth::logout();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Logout successful'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Logout failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -218,7 +239,7 @@ class AuthController extends Controller
             ]);
 
             // LOG untuk debugging
-            \Log::info('OTP Generated (Simple)', [
+            Log::info('OTP Generated (Simple)', [
                 'email' => $email,
                 'otp' => $otp,
                 'token' => $resetToken,
@@ -240,7 +261,7 @@ class AuthController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Forgot password error: ' . $e->getMessage());
+            Log::error('Forgot password error: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
@@ -396,7 +417,7 @@ class AuthController extends Controller
             }
 
             // LOG untuk debugging
-            \Log::info('Reset Password Attempt:', [
+            Log::info('Reset Password Attempt:', [
                 'email' => $request->email,
                 'otp_received' => $request->otp,
                 'token_received' => $request->reset_token
@@ -409,7 +430,7 @@ class AuthController extends Controller
                 ->first();
 
             if (!$resetData) {
-                \Log::warning('Reset data not found', ['email' => $request->email]);
+                Log::warning('Reset data not found', ['email' => $request->email]);
                 return response()->json([
                     'success' => false,
                     'message' => 'No active reset request found or already used'
@@ -417,7 +438,7 @@ class AuthController extends Controller
             }
 
             // LOG data dari database
-            \Log::info('Reset Data from DB:', [
+            Log::info('Reset Data from DB:', [
                 'db_otp_hash' => $resetData->otp,
                 'db_token_hash' => $resetData->token,
                 'expires_at' => $resetData->expires_at,
@@ -431,7 +452,7 @@ class AuthController extends Controller
                     ->where('id', $resetData->id)
                     ->update(['is_used' => true]);
 
-                \Log::warning('OTP expired', ['email' => $request->email]);
+                Log::warning('OTP expired', ['email' => $request->email]);
                 return response()->json([
                     'success' => false,
                     'message' => 'OTP has expired. Please request a new one.'
@@ -444,7 +465,7 @@ class AuthController extends Controller
                     ->where('id', $resetData->id)
                     ->update(['is_used' => true]);
 
-                \Log::warning('Too many attempts', ['email' => $request->email]);
+                Log::warning('Too many attempts', ['email' => $request->email]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Too many failed attempts. Please request a new OTP.'
@@ -460,7 +481,7 @@ class AuthController extends Controller
 
                 $remainingAttempts = 3 - ($resetData->attempts + 1);
 
-                \Log::warning('OTP verification failed', [
+                Log::warning('OTP verification failed', [
                     'email' => $request->email,
                     'remaining_attempts' => $remainingAttempts
                 ]);
@@ -474,7 +495,7 @@ class AuthController extends Controller
 
             // VERIFIKASI TOKEN
             if (!Hash::check($request->reset_token, $resetData->token)) {
-                \Log::warning('Token verification failed', ['email' => $request->email]);
+                Log::warning('Token verification failed', ['email' => $request->email]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid reset token'
@@ -515,7 +536,7 @@ class AuthController extends Controller
             $user->tokens()->delete();
 
             // Log keberhasilan
-            \Log::info('Password reset successful', [
+            Log::info('Password reset successful', [
                 'email' => $user->email,
                 'user_id' => $user->id
             ]);
@@ -532,7 +553,7 @@ class AuthController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Reset password error: ' . $e->getMessage(), [
+            Log::error('Reset password error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
 
