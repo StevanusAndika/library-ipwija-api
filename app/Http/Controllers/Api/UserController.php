@@ -187,7 +187,7 @@ class UserController extends Controller
     public function show($id)
     {
         // Cek admin
-        if (!auth()->user() || auth()->user()->role !== 'admin') {
+        if (!Auth::user() || Auth::user()->role !== 'admin') {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Admin access required.'
@@ -270,7 +270,7 @@ class UserController extends Controller
     public function destroy($id)
     {
         // Cek admin
-        if (!auth()->user() || auth()->user()->role !== 'admin') {
+        if (!Auth::user() || Auth::user()->role !== 'admin') {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Admin access required.'
@@ -501,7 +501,7 @@ class UserController extends Controller
     public function toggleStatus($id)
     {
         // Cek admin
-        if (!auth()->user() || auth()->user()->role !== 'admin') {
+        if (!Auth::user() || Auth::user()->role !== 'admin') {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Admin access required.'
@@ -534,7 +534,7 @@ class UserController extends Controller
     public function getUserStats($id)
     {
         // Cek admin
-        if (!auth()->user() || auth()->user()->role !== 'admin') {
+        if (!Auth::user() || Auth::user()->role !== 'admin') {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Admin access required.'
