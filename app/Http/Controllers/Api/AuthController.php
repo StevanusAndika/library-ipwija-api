@@ -72,7 +72,7 @@ class AuthController extends Controller
             if (!$login) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Invalid credentials'
+                    'message' => 'Email/NIM atau Password salah. Silahkan coba lagi.'
                 ], 401);
             }
 

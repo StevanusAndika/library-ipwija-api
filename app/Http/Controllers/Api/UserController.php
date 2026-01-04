@@ -334,6 +334,7 @@ class UserController extends Controller
                     'tanggal_lahir' => isset($row[5]) ? trim($row[5]) : null,
                     'agama' => isset($row[6]) ? trim($row[6]) : null,
                     'address' => isset($row[7]) ? trim($row[7]) : null,
+                    'email' => isset($row[8]) ? trim($row[8]) : null,
                     'line_number' => $lineNumber,
                 ];
 
@@ -365,10 +366,20 @@ class UserController extends Controller
                     }
                 }
 
+                // Check for duplicate email
+                if (!empty($userData['email'])) {
+                    $existingEmail = User::where('email', $userData['email'])->exists();
+                    if ($existingEmail) {
+                        $skippedCount++;
+                        $errors[] = "Baris {$lineNumber}: Email {$userData['email']} sudah terdaftar, data tidak diinput";
+                        $lineNumber++;
+                        continue;
+                    }
+                }
+
                 $chunk[] = $userData;
                 $lineNumber++;
 
-                // Process chunk when it reaches chunkSize or end of file
                 if (count($chunk) >= $chunkSize) {
                     $insertedCount += $this->processUserChunk($chunk, $errors);
                     $chunk = [];
@@ -424,11 +435,17 @@ class UserController extends Controller
                             continue;
                         }
 
+                        if (!empty($userData['email']) && User::where('email', $userData['email'])->exists()) {
+                            $errors[] = "Baris {$userData['line_number']}: Email {$userData['email']} sudah terdaftar (double check)";
+                            continue;
+                        }
+
                         // Create user
                         User::create([
                             'name' => $userData['name'],
                             'nim' => $userData['nim'] ?: null,
                             'phone' => $userData['phone'] ?: null,
+                            'email' => $userData['email'] ?: null,
                             'tempat_lahir' => $userData['tempat_lahir'] ?: null,
                             'tanggal_lahir' => $userData['tanggal_lahir'] ?: null,
                             'agama' => $userData['agama'] ?: null,
