@@ -37,36 +37,32 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // Auth routes dengan rate limiting KETAT
-Route::post('/register', [AuthController::class, 'register'])
-    ->middleware('rate.limit:5,10'); // 5 requests per 10 menit
+Route::post('/register', [AuthController::class, 'register']); // 5 requests per 10 menit
 
-Route::post('/login', [AuthController::class, 'login'])
-    ->middleware('rate.limit:10,5'); // 10 requests per 5 menit
+Route::post('/login', [AuthController::class, 'login']);
 
 // Password reset routes (public) dengan rate limiting SANGAT KETAT
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
-    ->middleware('rate.limit:3,15'); // 3 requests per 15 menit
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 
-Route::post('/reset-password', [AuthController::class, 'resetPassword'])
-    ->middleware('rate.limit:3,15');
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
-Route::post('/direct-reset-password', [AuthController::class, 'directResetPassword'])
-    ->middleware('rate.limit:3,15');
+Route::post('/direct-reset-password', [AuthController::class, 'directResetPassword']);
 
-Route::post('/simple-reset-password', [AuthController::class, 'simpleResetPassword'])
-    ->middleware('rate.limit:3,15');
+Route::post('/simple-reset-password', [AuthController::class, 'simpleResetPassword']);
 
 // Public book routes dengan rate limiting STANDARD
-Route::middleware('rate.limit:30,1')->group(function () {
-    Route::get('/books', [BookController::class, 'indexPublic']);
-    Route::get('/books/{id}', [BookController::class, 'showPublic']);
+Route::prefix('books')->group(function () {
+    Route::get('/', [BookController::class, 'indexPublic']);
+    Route::get('{id}', [BookController::class, 'showPublic']);
 });
 
+
 // Public category routes dengan rate limiting STANDARD
-Route::middleware('rate.limit:30,1')->group(function () {
-    Route::get('/categories', [CategoryController::class, 'indexPublic']);
-    Route::get('/categories/{id}', [CategoryController::class, 'show']);
-    Route::get('/categories/{id}/books', [CategoryController::class, 'booksByCategory']);
+Route::prefix('categories')->group(function () {
+
+    Route::get('/', [CategoryController::class, 'indexPublic']);
+    Route::get('/{id}', [CategoryController::class, 'show']);
+    Route::get('/{id}/books', [CategoryController::class, 'booksByCategory']);
 });
 
 // ==================== PROTECTED ROUTES (JWT) ====================
