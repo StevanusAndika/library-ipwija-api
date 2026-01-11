@@ -63,6 +63,13 @@ class UserController extends Controller
             $pdf->SetPrintHeader(false);
             $pdf->SetPrintFooter(false);
             $pdf->SetAutoPageBreak(false);
+            
+            $pdf->SetTitle('Kartu Anggota Perpustakaan IPWIJA - ' . $auth->name);
+            $pdf->SetAuthor('Universitas IPWIJA');
+            $pdf->SetSubject('Membership Card / Kartu Anggota');
+            $pdf->SetKeywords('membership, card, perpustakaan, IPWIJA, rekayasa perangkat lunak');
+            $pdf->SetCreator('Developed by Dhaffa Abdillah Hakim');
+            
             $pdf->AddPage();
 
             $pageWidth = $pdf->GetPageWidth();
