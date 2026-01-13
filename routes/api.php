@@ -39,7 +39,7 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 // Auth routes dengan rate limiting KETAT
 Route::post('/register', [AuthController::class, 'register']); // 5 requests per 10 menit
 
-Route::post('/login', [AuthController::class, 'login']);
+// Route::post('/login', [AuthController::class, 'login']);
 
 // Password reset routes (public) dengan rate limiting SANGAT KETAT
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
@@ -84,13 +84,13 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/dashboard/chart-data', [DashboardController::class, 'getChartData']);
 
         // ===== USER MANAGEMENT =====
-        Route::prefix('/users')->group(function () { 
+        Route::prefix('/users')->group(function () {
             Route::get('/', [UserController::class, 'index']);
             Route::post('/', [UserController::class, 'store']);
-            
+
             Route::post('/batch-insert', [UserController::class, 'batch_insert_users']);
             Route::post('/change-status-user', [UserController::class, 'change_status_user']);
-            
+
             Route::get('/{id}', [UserController::class, 'show']);
             Route::put('/{id?}', [UserController::class, 'update']);
             Route::delete('/{id}', [UserController::class, 'destroy']);
@@ -101,7 +101,7 @@ Route::middleware('auth:api')->group(function () {
 
         // Admin password reset - rate limiting EXTRA KETAT
         Route::post('/admin-reset-password', [AuthController::class, 'adminResetPassword'])
-            ->middleware('rate.limit:5,10'); // 5 requests per 10 menit
+            ->middleware('throttle:5,10'); // 5 requests per 10 menit
 
         // ===== CATEGORY MANAGEMENT =====
         Route::get('/categories', [CategoryController::class, 'index']);
@@ -122,7 +122,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/borrowings/{id}', [BorrowingController::class, 'show']);
 
         // Admin actions dengan rate limiting KETAT
-        Route::middleware('rate.limit:30,1')->group(function () {
+        Route::middleware('throttle:30,1')->group(function () {
             Route::post('/borrowings/{id}/approve', [BorrowingController::class, 'approve']);
             Route::post('/borrowings/{id}/reject', [BorrowingController::class, 'reject']);
             Route::post('/borrowings/{id}/mark-borrowed', [BorrowingController::class, 'markAsBorrowed']);
@@ -141,7 +141,7 @@ Route::middleware('auth:api')->group(function () {
 
         // Admin tools dengan rate limiting KHUSUS
         Route::post('/borrowings/auto-check-overdue', [BorrowingController::class, 'autoCheckOverdue'])
-            ->middleware('rate.limit:10,5'); // 10 requests per 5 menit
+            ->middleware('throttle:10,5'); // 10 requests per 5 menit
 
         Route::get('/borrowings/needing-update', [BorrowingController::class, 'getBorrowingsNeedingUpdate']);
 
@@ -154,10 +154,10 @@ Route::middleware('auth:api')->group(function () {
 });
 
 // ==================== AUTHENTICATED ROUTES ====================
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:api')->group(function () {
     // ========== AUTH ROUTES ==========
     Route::get('/profile', [AuthController::class, 'profile']);
-    
+
     Route::post('/complete-membership', [AuthController::class, 'completeMembership']);
 
     // ========== MAHASISWA ROUTES ==========
@@ -176,7 +176,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ========== ADMIN ROUTES ==========
-    
+
 });
 
 // ==================== FALLBACK ROUTE ====================
