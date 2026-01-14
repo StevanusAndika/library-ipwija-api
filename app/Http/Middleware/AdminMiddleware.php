@@ -13,14 +13,14 @@ class AdminMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         // Cek apakah user sudah login
-        if (!Auth::check()) {
+        if (!$request->user()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized. Please login first.'
+                'message' => 'Unauthorized. Please login again.'
             ], 401);
         }
 
-        $user = Auth::user();
+        $user = $request->user();
 
         if (!$user->role || $user->role != 'admin') {
             return response()->json([

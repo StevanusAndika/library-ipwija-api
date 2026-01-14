@@ -16,17 +16,16 @@ class UserMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        if (!Auth::check()) {
+        if (!$request->user()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized. Please login first.'
+                'message' => 'Unauthorized. Please login again.'
             ], 401);
         }
 
-        $user = Auth::user();
+        $user = $request->user();
 
-        if($user->role != 'user') 
-        {
+        if ($user->role != 'user') {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized Access.'

@@ -33,6 +33,19 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
+
+// Auth routes dengan rate limiting KETAT
+Route::post('/register', [AuthController::class, 'register']); // 5 requests per 10 menit
+
+// Route::post('/login', [AuthController::class, 'login']);
+
+// Password reset routes (public) dengan rate limiting SANGAT KETAT
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
+
 Route::post('/direct-reset-password', [AuthController::class, 'directResetPassword']);
 Route::post('/simple-reset-password', [AuthController::class, 'simpleResetPassword']);
 
@@ -104,8 +117,15 @@ Route::middleware('auth:api')->group(function () {
         Route::prefix('/users')->group(function () {
             Route::get('/', [UserController::class, 'index']);
             Route::post('/', [UserController::class, 'store']);
+
+
             Route::post('/batch-insert', [UserController::class, 'batch_insert_users']);
             Route::post('/change-status-user', [UserController::class, 'change_status_user']);
+
+
+            Route::post('/batch-insert', [UserController::class, 'batch_insert_users']);
+            Route::post('/change-status-user', [UserController::class, 'change_status_user']);
+
             Route::get('/{id}', [UserController::class, 'show']);
             Route::put('/{id?}', [UserController::class, 'update']);
             Route::delete('/{id}', [UserController::class, 'destroy']);
@@ -113,8 +133,14 @@ Route::middleware('auth:api')->group(function () {
             Route::get('/{id}/stats', [UserController::class, 'getUserStats']);
         });
 
+
+        // Admin password reset - rate limiting EXTRA KETAT
+        Route::post('/admin-reset-password', [AuthController::class, 'adminResetPassword'])
+            ->middleware('throttle:5,10'); // 5 requests per 10 menit
+
         // Admin password reset
         Route::post('/admin-reset-password', [AuthController::class, 'adminResetPassword']);
+
 
         // ===== CATEGORY MANAGEMENT =====
         Route::prefix('categories')->group(function () {
@@ -135,6 +161,67 @@ Route::middleware('auth:api')->group(function () {
         });
 
         // ===== BORROWING MANAGEMENT =====
+
+        Route::get('/borrowings', [BorrowingController::class, 'index']);
+        Route::get('/borrowings/{id}', [BorrowingController::class, 'show']);
+
+        // Admin actions dengan rate limiting KETAT
+        Route::middleware('throttle:30,1')->group(function () {
+            Route::post('/borrowings/{id}/approve', [BorrowingController::class, 'approve']);
+            Route::post('/borrowings/{id}/reject', [BorrowingController::class, 'reject']);
+            Route::post('/borrowings/{id}/mark-borrowed', [BorrowingController::class, 'markAsBorrowed']);
+            Route::post('/borrowings/{id}/return', [BorrowingController::class, 'returnBook']);
+            Route::post('/borrowings/{id}/update-status', [BorrowingController::class, 'updateStatus']);
+            Route::post('/borrowings/{id}/generate-fine', [BorrowingController::class, 'generateFineManually']);
+            Route::post('/borrowings/{id}/mark-late', [BorrowingController::class, 'markAsLate']);
+            Route::post('/borrowings/{id}/mark-fine-paid', [BorrowingController::class, 'markFinePaid']);
+            Route::post('/fines/{id}/mark-paid', [FineController::class, 'markAsPaid']);
+        });
+
+        // ===== BORROWING REPORTS =====
+        Route::get('/currently-borrowed', [BorrowingController::class, 'currentlyBorrowed']);
+        Route::get('/late-returns', [BorrowingController::class, 'lateReturns']);
+        Route::get('/unpaid-fines', [BorrowingController::class, 'unpaidFines']);
+
+        // Admin tools dengan rate limiting KHUSUS
+        Route::post('/borrowings/auto-check-overdue', [BorrowingController::class, 'autoCheckOverdue'])
+            ->middleware('throttle:10,5'); // 10 requests per 5 menit
+
+        Route::get('/borrowings/needing-update', [BorrowingController::class, 'getBorrowingsNeedingUpdate']);
+
+        // ===== FINE MANAGEMENT =====
+        Route::get('/fines', [FineController::class, 'index']);
+        Route::get('/fines/statistics', [FineController::class, 'statistics']);
+    });
+
+    Route::post('/logout', [AuthController::class, 'logout']);
+});
+
+// ==================== AUTHENTICATED ROUTES ====================
+Route::middleware('auth:api')->group(function () {
+    // ========== AUTH ROUTES ==========
+    Route::get('/profile', [AuthController::class, 'profile']);
+
+    Route::post('/complete-membership', [AuthController::class, 'completeMembership']);
+
+    // ========== MAHASISWA ROUTES ==========
+    Route::middleware('mahasiswa')->group(function () {
+        // Borrowing
+        Route::get('/my-borrowings', [BorrowingController::class, 'myBorrowings']);
+        Route::get('/borrowing-history', [BorrowingController::class, 'borrowingHistory']);
+        Route::post('/borrowings', [BorrowingController::class, 'store']);
+        Route::post('/borrowings/{id}/extend', [BorrowingController::class, 'extend']);
+        Route::get('/check-borrow-status', [BorrowingController::class, 'checkBorrowStatus']);
+        // Fines
+        Route::get('/my-fines', [FineController::class, 'myFines']);
+
+        // Ebook download
+        Route::get('/books/{id}/download', [BookController::class, 'downloadEbook']);
+    });
+
+    // ========== ADMIN ROUTES ==========
+
+
         Route::prefix('borrowings')->group(function () {
             Route::get('/', [BorrowingController::class, 'index']);
             Route::get('/{id}', [BorrowingController::class, 'show']);
@@ -160,6 +247,7 @@ Route::middleware('auth:api')->group(function () {
             Route::post('/{id}/mark-paid', [FineController::class, 'markAsPaid']);
         });
     });
+
 });
 
 // ==================== FALLBACK ROUTE ====================
