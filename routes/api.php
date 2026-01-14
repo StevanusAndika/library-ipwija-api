@@ -20,9 +20,6 @@ use App\Http\Controllers\Api\UserController;
 |
 */
 
-// ==================== TEST ROUTE UNTUK RATE LIMITING ====================
-
-
 // ==================== PUBLIC ROUTES ====================
 Route::get('/', function () {
     return response()->json([
@@ -31,10 +28,12 @@ Route::get('/', function () {
         'version' => '1.0.0'
     ]);
 });
+
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
 
 // Auth routes dengan rate limiting KETAT
 Route::post('/register', [AuthController::class, 'register']); // 5 requests per 10 menit
@@ -46,20 +45,18 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
-Route::post('/direct-reset-password', [AuthController::class, 'directResetPassword']);
 
+Route::post('/direct-reset-password', [AuthController::class, 'directResetPassword']);
 Route::post('/simple-reset-password', [AuthController::class, 'simpleResetPassword']);
 
-// Public book routes dengan rate limiting STANDARD
+// Public book routes
 Route::prefix('books')->group(function () {
     Route::get('/', [BookController::class, 'indexPublic']);
     Route::get('{id}', [BookController::class, 'showPublic']);
 });
 
-
-// Public category routes dengan rate limiting STANDARD
+// Public category routes
 Route::prefix('categories')->group(function () {
-
     Route::get('/', [CategoryController::class, 'indexPublic']);
     Route::get('/{id}', [CategoryController::class, 'show']);
     Route::get('/{id}/books', [CategoryController::class, 'booksByCategory']);
@@ -67,17 +64,50 @@ Route::prefix('categories')->group(function () {
 
 // ==================== PROTECTED ROUTES (JWT) ====================
 Route::middleware('auth:api')->group(function () {
+    // ========== AUTH ROUTES ==========
+    Route::get('/profile', [AuthController::class, 'profile']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/complete-membership', [AuthController::class, 'completeMembership']);
 
     Route::prefix('profile')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/update/{id?}', [UserController::class, 'update']);
     });
 
+    // ========== USER/MAHASISWA ROUTES ==========
     Route::middleware('user')->group(function () {
+        // User dashboard
         Route::get('/dashboard', [DashboardController::class, 'dashboard_user']);
         Route::get('/check-uncomplete-data', [UserController::class, 'check_uncomplete_data']);
+
+        // Fines routes
+        Route::get('/my-fines', [FineController::class, 'myFines']);
+
+        // Ebook download
+        Route::get('/books/{id}/download', [BookController::class, 'downloadEbook']);
+
+        // Borrowing routes - DIPINDAH KE LUAR user middleware jika ada masalah
     });
 
+    // ========== BORROWING ROUTES (untuk semua authenticated users) ==========
+    // NOTE: Rute borrowing dipisah karena mungkin middleware 'user' terlalu ketat
+    Route::prefix('borrowings')->group(function () {
+        Route::get('/my-borrowings', [BorrowingController::class, 'myBorrowings']);
+        Route::get('/borrowing-history', [BorrowingController::class, 'borrowingHistory']);
+        Route::post('/', [BorrowingController::class, 'store']);
+        Route::get('/check-borrow-status', [BorrowingController::class, 'checkBorrowStatus']);
+        Route::get('/my-stats', [BorrowingController::class, 'myStats']);
+        Route::get('/check-book-status/{bookId}', [BorrowingController::class, 'checkBookBorrowStatus']);
+
+        // Routes dengan ID
+        Route::prefix('{id}')->group(function () {
+            Route::get('/details', [BorrowingController::class, 'getBorrowingDetails']);
+            Route::post('/extend', [BorrowingController::class, 'extend']);
+            Route::post('/cancel', [BorrowingController::class, 'cancel']);
+        });
+    });
+
+    // ========== ADMIN ROUTES ==========
     Route::middleware('admin')->prefix('admin')->group(function () {
         // ===== DASHBOARD =====
         Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
@@ -88,36 +118,50 @@ Route::middleware('auth:api')->group(function () {
             Route::get('/', [UserController::class, 'index']);
             Route::post('/', [UserController::class, 'store']);
 
+
+            Route::post('/batch-insert', [UserController::class, 'batch_insert_users']);
+            Route::post('/change-status-user', [UserController::class, 'change_status_user']);
+
+
             Route::post('/batch-insert', [UserController::class, 'batch_insert_users']);
             Route::post('/change-status-user', [UserController::class, 'change_status_user']);
 
             Route::get('/{id}', [UserController::class, 'show']);
             Route::put('/{id?}', [UserController::class, 'update']);
             Route::delete('/{id}', [UserController::class, 'destroy']);
-            // Route::post('/{id}/toggle-status', [UserController::class, 'toggleStatus']);
             Route::post('/{id}/toggle-membership', [UserController::class, 'toggleMembership']);
             Route::get('/{id}/stats', [UserController::class, 'getUserStats']);
         });
+
 
         // Admin password reset - rate limiting EXTRA KETAT
         Route::post('/admin-reset-password', [AuthController::class, 'adminResetPassword'])
             ->middleware('throttle:5,10'); // 5 requests per 10 menit
 
+        // Admin password reset
+        Route::post('/admin-reset-password', [AuthController::class, 'adminResetPassword']);
+
+
         // ===== CATEGORY MANAGEMENT =====
-        Route::get('/categories', [CategoryController::class, 'index']);
-        Route::post('/categories', [CategoryController::class, 'store']);
-        Route::get('/categories/{id}', [CategoryController::class, 'show']);
-        Route::put('/categories/{id}', [CategoryController::class, 'update']);
-        Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+        Route::prefix('categories')->group(function () {
+            Route::get('/', [CategoryController::class, 'index']);
+            Route::post('/', [CategoryController::class, 'store']);
+            Route::get('/{id}', [CategoryController::class, 'show']);
+            Route::put('/{id}', [CategoryController::class, 'update']);
+            Route::delete('/{id}', [CategoryController::class, 'destroy']);
+        });
 
         // ===== BOOK MANAGEMENT =====
-        Route::get('/books', [BookController::class, 'index']);
-        Route::post('/books', [BookController::class, 'store']);
-        Route::get('/books/{id}', [BookController::class, 'show']);
-        Route::put('/books/{id}', [BookController::class, 'update']);
-        Route::delete('/books/{id}', [BookController::class, 'destroy']);
+        Route::prefix('books')->group(function () {
+            Route::get('/', [BookController::class, 'index']);
+            Route::post('/', [BookController::class, 'store']);
+            Route::get('/{id}', [BookController::class, 'show']);
+            Route::put('/{id}', [BookController::class, 'update']);
+            Route::delete('/{id}', [BookController::class, 'destroy']);
+        });
 
         // ===== BORROWING MANAGEMENT =====
+
         Route::get('/borrowings', [BorrowingController::class, 'index']);
         Route::get('/borrowings/{id}', [BorrowingController::class, 'show']);
 
@@ -177,40 +221,81 @@ Route::middleware('auth:api')->group(function () {
 
     // ========== ADMIN ROUTES ==========
 
+
+        Route::prefix('borrowings')->group(function () {
+            Route::get('/', [BorrowingController::class, 'index']);
+            Route::get('/{id}', [BorrowingController::class, 'show']);
+            Route::post('/{id}/approve', [BorrowingController::class, 'approve']);
+            Route::post('/{id}/reject', [BorrowingController::class, 'reject']);
+            Route::post('/{id}/mark-borrowed', [BorrowingController::class, 'markAsBorrowed']);
+            Route::post('/{id}/return', [BorrowingController::class, 'returnBook']);
+            Route::post('/{id}/update-status', [BorrowingController::class, 'updateStatus']);
+            Route::post('/{id}/generate-fine', [BorrowingController::class, 'generateFineManually']);
+            Route::post('/{id}/mark-late', [BorrowingController::class, 'markAsLate']);
+            Route::post('/{id}/mark-fine-paid', [BorrowingController::class, 'markFinePaid']);
+            Route::get('/currently-borrowed', [BorrowingController::class, 'currentlyBorrowed']);
+            Route::get('/late-returns', [BorrowingController::class, 'lateReturns']);
+            Route::get('/unpaid-fines', [BorrowingController::class, 'unpaidFines']);
+            Route::post('/auto-check-overdue', [BorrowingController::class, 'autoCheckOverdue']);
+            Route::get('/needing-update', [BorrowingController::class, 'getBorrowingsNeedingUpdate']);
+        });
+
+        // ===== FINE MANAGEMENT =====
+        Route::prefix('fines')->group(function () {
+            Route::get('/', [FineController::class, 'index']);
+            Route::get('/statistics', [FineController::class, 'statistics']);
+            Route::post('/{id}/mark-paid', [FineController::class, 'markAsPaid']);
+        });
+    });
+
 });
 
 // ==================== FALLBACK ROUTE ====================
-Route::fallback(function () {
-    return response()->json([
-        'success' => false,
-        'message' => 'Endpoint not found. Check API documentation.',
-        'available_endpoints' => [
-            'PUBLIC ENDPOINTS:',
-            'GET  /api/test-rate-limit (rate limited: 60/min)',
-            'POST /api/register (rate limited: 5/10min)',
-            'POST /api/login (rate limited: 10/5min)',
-            'POST /api/forgot-password (rate limited: 3/15min)',
-            'POST /api/reset-password (rate limited: 3/15min)',
-            'POST /api/direct-reset-password (rate limited: 3/15min)',
-            'POST /api/simple-reset-password (rate limited: 3/15min)',
-            'GET  /api/books (rate limited: 30/min)',
-            'GET  /api/categories (rate limited: 30/min)',
+// Route::fallback(function () {
+//     return response()->json([
+//         'success' => false,
+//         'message' => 'Endpoint not found. Check API documentation.',
+//         'available_endpoints' => [
+//             'PUBLIC ENDPOINTS:',
+//             'GET  /',
+//             'POST /api/register',
+//             'POST /api/login',
+//             'POST /api/forgot-password',
+//             'POST /api/reset-password',
+//             'GET  /api/books',
+//             'GET  /api/categories',
 
-            'AUTHENTICATED ENDPOINTS:',
-            'GET  /api/profile (rate limited: 60/min)',
-            'POST /api/logout (rate limited: 60/min)',
-            'POST /api/complete-membership (rate limited: 60/min)',
+//             'AUTHENTICATED ENDPOINTS:',
+//             'GET  /api/profile',
+//             'POST /api/logout',
+//             'POST /api/complete-membership',
+//             'GET  /api/profile/me',
+//             'POST /api/profile/update/{id?}',
 
-            'USER ENDPOINTS:',
-            'GET  endpoints (rate limited: 120/min)',
-            'POST endpoints (rate limited: 30/min)',
-            'GET  /api/books/{id}/download (rate limited: 10/5min)',
+//             'USER ENDPOINTS:',
+//             'GET  /api/dashboard',
+//             'GET  /api/check-uncomplete-data',
+//             'GET  /api/my-fines',
+//             'GET  /api/books/{id}/download',
 
-            'ADMIN ENDPOINTS:',
-            'Most endpoints (rate limited: 100/min)',
-            'Critical actions (rate limited: 30/min)',
-            'Admin password reset (rate limited: 5/10min)',
-            'Auto check overdue (rate limited: 10/5min)'
-        ]
-    ], 404);
-});
+//             'BORROWING ENDPOINTS:',
+//             'GET  /api/borrowings/my-borrowings',
+//             'GET  /api/borrowings/borrowing-history',
+//             'POST /api/borrowings',
+//             'GET  /api/borrowings/check-borrow-status',
+//             'POST /api/borrowings/{id}/extend',
+//             'POST /api/borrowings/{id}/cancel',
+//             'GET  /api/borrowings/my-stats',
+//             'GET  /api/borrowings/{id}/details',
+//             'GET  /api/borrowings/check-book-status/{bookId}',
+
+//             'ADMIN ENDPOINTS:',
+//             'GET  /api/admin/dashboard/stats',
+//             'GET  /api/admin/dashboard/chart-data',
+//             'GET  /api/admin/users',
+//             'GET  /api/admin/books',
+//             'GET  /api/admin/borrowings',
+//             'GET  /api/admin/fines',
+//         ]
+//     ], 404);
+// });
