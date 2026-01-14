@@ -16,14 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'user' => \App\Http\Middleware\UserMiddleware::class,
-            // 'cors' => \App\Http\Middleware\CorsMiddleware::class,
-            // 'jwt' => \Tymon\JWTAuth\Middleware\GetUserFromToken::class,
-            // 'jwt.refresh' => \Tymon\JWTAuth\Middleware\RefreshToken::class,
         ]);
 
-        // Add CORS middleware to global middleware
-        // $middleware->appendToGroup('api', \App\Http\Middleware\CorsMiddleware::class);
-        // $middleware->appendToGroup('web', \App\Http\Middleware\CorsMiddleware::class);
+        // $middleware->prependToGroup('api', \Fruitcake\Cors\HandleCors::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // Custom exception untuk rate limit

@@ -57,143 +57,144 @@ class UserController extends Controller
                 abort(404, 'User not found');
             }
 
-            $pdf = new TCPDF('L', 'mm', 'A5', true, 'UTF-8', false);
+            $pdf = new TCPDF('L', 'mm', 'A7', true, 'UTF-8', false);
             $pdf->SetDefaultMonospacedFont(PDF_FONT_MONOSPACED);
             $pdf->SetMargins(0, 0, 0);
             $pdf->SetPrintHeader(false);
             $pdf->SetPrintFooter(false);
             $pdf->SetAutoPageBreak(false);
+            
+            $pdf->SetTitle('Kartu Anggota Perpustakaan IPWIJA - ' . $auth->name);
+            $pdf->SetAuthor('Universitas IPWIJA');
+            $pdf->SetSubject('Membership Card / Kartu Anggota');
+            $pdf->SetKeywords('membership, card, perpustakaan, IPWIJA, rekayasa perangkat lunak');
+            $pdf->SetCreator('Developed by Dhaffa Abdillah Hakim');
+            
             $pdf->AddPage();
 
             $pageWidth = $pdf->GetPageWidth();
             $pageHeight = $pdf->GetPageHeight();
 
-            // Background gradient (blue)
-            $pdf->SetFillColor(26, 58, 122);
+            $bgPath = public_path('images/bg.jpg');
+            if (file_exists($bgPath)) {
+                $pdf->Image($bgPath, 0, 0, $pageWidth, $pageHeight, 'jpg', '', '', false, 300, '', false, false, 1, false, false, false);
+            } else {
+                // Fallback to blue if image not found
+                $pdf->SetFillColor(26, 58, 122);
+                $pdf->Rect(0, 0, $pageWidth, $pageHeight, 'F');
+            }
+
+            $pdf->SetFillColor(0, 0, 0);
+            $pdf->SetAlpha(0.5);
             $pdf->Rect(0, 0, $pageWidth, $pageHeight, 'F');
+            $pdf->SetAlpha(1.0);
+
+            $logoWidth = $pageWidth * 0.29;
+            $logoHeight = $pageHeight * 0.095;
+            $logoPadding = $pageWidth * 0.03;
+            $logoPath = public_path('images/logo-ipwija-web.png');
+            if (file_exists($logoPath)) {
+                $pdf->Image($logoPath, $logoPadding, $logoPadding, $logoWidth, $logoHeight, 'png', '', '', false, 300, '', false, false, 0, false, false, false);
+            } else {
+                $pdf->SetFont('helvetica', 'B', 12);
+                $pdf->SetTextColor(255, 255, 255);
+                $pdf->SetXY(10, 20);
+                $pdf->Cell(30, 10, 'Universitas IPWIJA', 0, 0, 'C', 0, '', 0);
+            }
+
+            $gapSize = $pageHeight * 0.05;
+            $separatorY = $logoPadding + $logoHeight + $gapSize;
+            $separatorLineWidth = $pageWidth - (2 * $logoPadding);
             
-            // Lighter blue gradient effect
-            $pdf->SetFillColor(44, 90, 160);
-            $pdf->Rect($pageWidth * 0.6, 0, $pageWidth * 0.4, $pageHeight, 'F');
+            $pdf->SetDrawColor(255, 255, 255);
+            $pdf->SetLineWidth(0.3);
+            $pdf->Line($logoPadding, $separatorY, $separatorLineWidth, $separatorY);
 
-            // LEFT SECTION - Logo & Text
-            $xStart = 10;
-            $yStart = 12;
-
-            // Logo Circle
-            $pdf->SetFillColor(255, 255, 255);
-            $pdf->Circle($xStart + 12, $yStart + 12, 10, 0, 360, 'F');
-            
-            // Logo text inside circle
-            $pdf->SetFont('helvetica', 'B', 16);
-            $pdf->SetTextColor(26, 58, 122);
-            $pdf->SetXY($xStart + 5, $yStart + 6);
-            $pdf->Cell(14, 12, '🎓', 0, 0, 'C');
-
-            $pdf->SetFont('helvetica', 'B', 7);
+            // Section Data Diri
+            $pdf->SetFont('helvetica', 'B', 13);
             $pdf->SetTextColor(255, 255, 255);
-            $pdf->SetXY($xStart, $yStart + 23);
-            $pdf->Cell(24, 3, 'UNIVERSITAS', 0, 1, 'C');
-            $pdf->SetXY($xStart, $yStart + 26);
-            $pdf->Cell(24, 3, 'IPWIJA', 0, 1, 'C');
+            $pdf->SetXY(0, ($pageHeight * 0.22));
+            $pdf->Cell(0, 5,  "KARTU ANGGOTA PERPUSTAKAAN", 0, 1, 'C', 0, '', 0);
 
-            // Member name
-            $pdf->SetFont('helvetica', 'B', 14);
-            $pdf->SetTextColor(255, 255, 255);
-            $pdf->SetXY($xStart + 27, $yStart + 5);
-            $nameLines = $pdf->getStringWidth($auth->name) > 35 ? 2 : 1;
-            $pdf->MultiCell(35, 5, strtoupper($auth->name), 0, 'L', false);
+            $pdf->SetFont('helvetica', '', 12);
+            $pdf->SetXY($logoPadding, ($pageHeight * 0.35));
+            $memberName = strlen($auth->name) > 35 ? substr(strtoupper($auth->name), 0, 35) . '...' : strtoupper($auth->name);
+            $pdf->Cell(0, 5, $memberName, 0, 1, 'L', 0, '', 0);
 
-            // Info details
-            $infoY = $yStart + 15;
-            $pdf->SetFont('helvetica', 'B', 6);
-            $pdf->SetTextColor(200, 200, 200);
+            $pdf->SetXY($logoPadding, ($pageHeight * 0.45));
+            if ($auth->nim) {
+                $pdf->SetFont('helvetica', '', 12);
+                $pdf->Cell(0, 5, $auth->nim, 0, 1, 'L', 0, '', 0);
+            } else {
+                $pdf->SetFont('helvetica', '', 9);
+                $pdf->Cell(0, 5, 'NIM tidak tersedia', 0, 1, 'L', 0, '', 0);
+            }
 
-            // NIM
-            $pdf->SetXY($xStart + 27, $infoY);
-            $pdf->Cell(8, 3, 'NIM', 0, 0);
-            $pdf->SetFont('helvetica', '', 8);
-            $pdf->SetTextColor(255, 255, 255);
-            $pdf->SetXY($xStart + 36, $infoY);
-            $pdf->Cell(15, 3, $auth->nim ?? 'N/A', 0, 1);
+            // Tempat Lahir dan Tanggal Lahir
+            $pdf->SetXY($logoPadding, ($pageHeight * 0.55));
+            $birthInfo = '';
+            $tempatLahir = $auth->tempat_lahir ?? null;
+            $tanggalLahir = $auth->tanggal_lahir ?? null;
 
-            // Joined Date
-            $pdf->SetFont('helvetica', 'B', 6);
-            $pdf->SetTextColor(200, 200, 200);
-            $pdf->SetXY($xStart + 27, $infoY + 4);
-            $pdf->Cell(8, 3, 'JOINED', 0, 0);
-            $pdf->SetFont('helvetica', '', 8);
-            $pdf->SetTextColor(255, 255, 255);
-            $pdf->SetXY($xStart + 36, $infoY + 4);
-            $pdf->Cell(15, 3, $auth->created_at->format('m/d/y'), 0, 1);
+            if ($tempatLahir && $tanggalLahir) {
+                $birthDate = date('d F Y', strtotime($tanggalLahir));
+                $birthInfo = $tempatLahir . ', ' . $birthDate;
+                $pdf->SetFont('helvetica', '', 12);
+                $pdf->Cell(0, 5, $birthInfo, 0, 1, 'L', 0, '', 0);
+            } else {
+                $pdf->SetFont('helvetica', '', 9);
+                $pdf->Cell(0, 5, 'Tempat dan tanggal lahir tidak tersedia', 0, 1, 'L', 0, '', 0);
+            }
 
-            // Status
-            $pdf->SetFont('helvetica', 'B', 6);
-            $pdf->SetTextColor(200, 200, 200);
-            $pdf->SetXY($xStart + 27, $infoY + 8);
-            $pdf->Cell(8, 3, 'STATUS', 0, 0);
-            $pdf->SetFont('helvetica', '', 8);
-            $pdf->SetTextColor(255, 255, 255);
-            $pdf->SetXY($xStart + 36, $infoY + 8);
-            $pdf->Cell(15, 3, strtoupper($auth->status), 0, 1);
+            $photoWidth = $pageWidth * 0.20;
+            $photoHeight = $pageHeight * 0.40;
+            $photoX = $pageWidth * 0.73;
+            $photoY = $pageHeight * 0.35;
 
-            // Member badge
-            $pdf->SetFillColor(255, 193, 7);
-            $pdf->SetDrawColor(255, 193, 7);
-            $pdf->RoundedRect($xStart + 27, $infoY + 13, 20, 4, 2, '1111', 'F');
-            
-            $pdf->SetFont('helvetica', 'B', 7);
-            $pdf->SetTextColor(51, 51, 51);
-            $pdf->SetXY($xStart + 27, $infoY + 13.5);
-            $pdf->Cell(20, 3, '📚 MEMBER', 0, 0, 'C');
-
-            // RIGHT SECTION - Photo & Barcode
-            $rightX = $pageWidth - 42;
-            $photoY = $yStart + 2;
-
-            // Photo container
             $pdf->SetFillColor(240, 240, 240);
-            $pdf->Rect($rightX, $photoY, 35, 45, 'F');
+            $pdf->SetDrawColor(200, 200, 200);
+            $pdf->SetLineWidth(0.5);
+            $pdf->Rect($photoX, $photoY, $photoWidth, $photoHeight, 'FD');
 
-            // Add photo if exists
-            if ($auth->profile_picture && file_exists(storage_path('app/public/' . $auth->profile_picture))) {
+            $profilePicturePath = $auth->profile_picture ? storage_path('app/public/' . $auth->profile_picture) : null;
+            
+            if ($profilePicturePath && file_exists($profilePicturePath)) {
                 $pdf->Image(
-                    storage_path('app/public/' . $auth->profile_picture),
-                    $rightX, $photoY, 35, 45, 'jpg', '', 'T', false, 300, '', false, false, 1, false, false, false
+                    $profilePicturePath,
+                    $photoX, $photoY, $photoWidth, $photoHeight, 'jpg', '', '', false, 300, '', false, false, 1, false, false, false
                 );
             } else {
-                // Placeholder
-                $pdf->SetFont('helvetica', '', 24);
+                // Display first letter of name
+                $firstLetter = strtoupper(substr($auth->name, 0, 1));
+                $pdf->SetFont('helvetica', 'B', 60);
                 $pdf->SetTextColor(150, 150, 150);
-                $pdf->SetXY($rightX, $photoY + 12);
-                $pdf->Cell(35, 20, '👤', 0, 0, 'C');
+                $pdf->SetXY($photoX, $photoY + ($photoHeight / 3));
+                $pdf->Cell($photoWidth, $photoHeight / 3, $firstLetter, 0, 0, 'C');
             }
 
-            // Barcode section
-            $barcodeY = $photoY + 48;
-            
-            // Barcode container
-            $pdf->SetFillColor(255, 255, 255);
-            $pdf->Rect($rightX + 2, $barcodeY, 31, 12, 'F');
+            $bottomY = $pageHeight * 0.80;
 
-            // Simple barcode pattern
-            $pdf->SetDrawColor(0, 0, 0);
-            $barWidth = 1.5;
-            $barX = $rightX + 4;
-            $pattern = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1];
-            
-            foreach ($pattern as $i => $bar) {
-                if ($bar) {
-                    $pdf->Rect($barX + ($i * $barWidth), $barcodeY + 1, $barWidth - 0.1, 10, 'F');
-                }
-            }
-
-            // NIM below barcode
-            $pdf->SetFont('helvetica', 'B', 6);
+            // Left side - Bergabung pada
+            $pdf->SetFont('helvetica', '', 10);
             $pdf->SetTextColor(255, 255, 255);
-            $pdf->SetXY($rightX, $barcodeY + 13);
-            $pdf->Cell(35, 3, $auth->nim ?? 'N/A', 0, 0, 'C');
+            $pdf->SetXY($logoPadding, $bottomY);
+            $pdf->Cell(0, 4, 'Bergabung pada:', 0, 1, 'L', 0, '', 0);
 
+            $joinDate = $auth->created_at->format('d/m/Y');
+            $pdf->SetFont('helvetica', 'B', 11);
+            $pdf->SetXY($logoPadding, $bottomY + 4);
+            $pdf->Cell(0, 4, $joinDate, 0, 1, 'L', 0, '', 0);
+
+            $barcodeData = $auth->nim ?? $auth->email ?? 'N/A';
+            
+            $pdf->SetFillColor(255, 255, 255);
+            $pdf->SetDrawColor(200, 200, 200);
+            $pdf->SetLineWidth(0.3);
+            $pdf->Rect($photoX, $bottomY, $photoWidth, 8, 'FD');
+            
+            $pdf->SetTextColor(0, 0, 0);
+            $pdf->write1DBarcode($barcodeData, 'C128', $photoX + 1, $bottomY + 1, $photoWidth - 2, 6, 0.4, [], 'N');
+            
             // Output PDF
             $filename = 'membership-card-' . $auth->nim . '.pdf';
             $pdf->Output($filename, 'I');
