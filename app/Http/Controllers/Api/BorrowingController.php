@@ -124,11 +124,12 @@ class BorrowingController extends Controller
             ], 400);
         }
 
-        // Cek ketersediaan buku
-        if (!$book->isAvailable()) {
+        // Cek ketersediaan buku - PERUBAHAN DI SINI
+        // Saat pending, kita hanya mengecek apakah ada stok yang tersedia
+        if ($book->available_stock <= 0) {
             return response()->json([
                 'success' => false,
-                'message' => 'Buku tidak tersedia',
+                'message' => 'Buku tidak tersedia untuk dipinjam',
                 'book_status' => [
                     'available_stock' => $book->available_stock,
                     'total_stock' => $book->stock,
@@ -194,29 +195,30 @@ class BorrowingController extends Controller
                 'notes' => json_encode([
                     'user_notes' => $notes,
                     'previous_borrowings_count' => $user->borrowings()->where('book_id', $book->id)->count(),
-                    'request_ip' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                    'requested_borrow_date' => $request->borrow_date,
-                    'requested_return_date' => $request->return_date
+                  //
+                    'stock_operation' => 'no_stock_reduction_on_pending'
                 ])
             ]);
 
-            // Kurangi stok buku karena ada permintaan pending
-            $book->available_stock -= 1;
-            $book->save();
+            // PERUBAHAN PENTING: TIDAK mengurangi stok buku saat status pending
+            // Stok hanya akan dikurangi saat status diubah menjadi 'approved'
+            // $book->available_stock -= 1;  // DIHAPUS
+            // $book->save();  // DIHAPUS
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Permintaan peminjaman berhasil diajukan',
+                'message' => 'Permintaan peminjaman berhasil diajukan. Menunggu persetujuan admin.',
                 'data' => $borrowing->load(['book.category']),
                 'borrow_details' => [
                     'borrow_code' => $borrowCode,
+                    'status' => 'pending',
                     'borrow_date' => $borrowDate->format('d-m-Y'),
                     'due_date' => $dueDate->format('d-m-Y'),
                     'days' => $borrowDate->diffInDays($dueDate),
-                    'max_days_allowed' => 7
+                    'max_days_allowed' => 7,
+                    'note' => 'Stok buku belum dikurangi karena status masih pending.'
                 ]
             ], 201);
         } catch (\Exception $e) {
@@ -257,7 +259,7 @@ class BorrowingController extends Controller
         if (!$book || $book->available_stock <= 0 || $book->status != 1) {
             return response()->json([
                 'success' => false,
-                'message' => 'Buku tidak tersedia',
+                'message' => 'Buku tidak tersedia untuk disetujui',
                 'book_info' => $book ? [
                     'title' => $book->title,
                     'status' => $book->status,
@@ -303,16 +305,50 @@ class BorrowingController extends Controller
             ], 400);
         }
 
-        // Update status
-        $borrowing->status = 'approved';
-        $borrowing->approved_at = now();
-        $borrowing->save();
+        DB::beginTransaction();
+        try {
+            // PERUBAHAN PENTING: Kurangi stok buku saat status diubah menjadi approved
+            $book->available_stock -= 1;
+            $book->save();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Peminjaman berhasil disetujui',
-            'data' => $borrowing->load(['user', 'book.category'])
-        ]);
+            // Update status dan catatan
+            $borrowing->status = 'approved';
+            $borrowing->approved_at = now();
+
+            // Update notes untuk mencatat pengurangan stok
+            $currentNotes = json_decode($borrowing->notes, true) ?? [];
+            $currentNotes['approval_details'] = [
+                'approved_at' => now()->toDateTimeString(),
+                'stock_reduced' => true,
+                'previous_available_stock' => $book->available_stock + 1,
+                'new_available_stock' => $book->available_stock,
+                'admin_action' => 'stock_reduced_on_approval'
+            ];
+            $borrowing->notes = json_encode($currentNotes);
+
+            $borrowing->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Peminjaman berhasil disetujui dan stok buku telah dikurangi',
+                'data' => $borrowing->load(['user', 'book.category']),
+                'stock_info' => [
+                    'book_title' => $book->title,
+                    'previous_stock' => $book->available_stock + 1,
+                    'current_stock' => $book->available_stock,
+                    'total_stock' => $book->stock
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyetujui peminjaman',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -360,22 +396,23 @@ class BorrowingController extends Controller
             $currentNotes['admin_rejection'] = [
                 'reason' => $request->reason,
                 'admin_notes' => $request->admin_notes,
-                'rejected_at' => now()->toDateTimeString()
+                'rejected_at' => now()->toDateTimeString(),
+                'note' => 'Stok tidak berubah karena belum dikurangi sejak awal (status pending)'
             ];
             $borrowing->notes = json_encode($currentNotes);
             $borrowing->save();
 
-            // Tambah kembali stok buku karena permintaan ditolak
+            // PERUBAHAN: TIDAK perlu menambah stok buku karena stok belum pernah dikurangi
+            // Hanya log saja bahwa stok tidak berubah
             if ($borrowing->book) {
-                $borrowing->book->available_stock += 1;
-                $borrowing->book->save();
+                Log::info("Borrowing #{$borrowing->id} rejected. Stock unchanged at {$borrowing->book->available_stock} because it was never reduced (pending status).");
             }
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Borrowing rejected successfully',
+                'message' => 'Permintaan peminjaman ditolak. Stok buku tidak berubah.',
                 'data' => $borrowing->load(['user', 'book.category'])
             ]);
         } catch (\Exception $e) {
@@ -409,29 +446,66 @@ class BorrowingController extends Controller
             ], 400);
         }
 
-        $borrowing->status = 'borrowed';
-        $borrowing->borrowed_at = now();
-
-        // Set due date maksimal 7 hari dari sekarang
-        $maxDays = 7;
-        if ($borrowing->book && $borrowing->book->category) {
-            $categoryMaxDays = $borrowing->book->category->max_borrow_days;
-            $maxDays = min($categoryMaxDays, 7);
+        // Periksa apakah stok masih tersedia
+        $book = $borrowing->book;
+        if (!$book || $book->available_stock <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Stok buku tidak tersedia untuk dipinjam',
+                'book_info' => $book ? [
+                    'title' => $book->title,
+                    'available_stock' => $book->available_stock,
+                    'total_stock' => $book->stock
+                ] : null
+            ], 400);
         }
 
-        $borrowing->due_date = now()->addDays($maxDays);
-        $borrowing->save();
+        DB::beginTransaction();
+        try {
+            $borrowing->status = 'borrowed';
+            $borrowing->borrowed_at = now();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Buku berhasil ditandai sebagai dipinjam',
-            'data' => $borrowing->load(['user', 'book.category']),
-            'borrow_details' => [
-                'due_date' => $borrowing->due_date->format('d-m-Y'),
-                'max_days' => $maxDays,
-                'days_remaining' => now()->diffInDays($borrowing->due_date, false)
-            ]
-        ]);
+            // Set due date maksimal 7 hari dari sekarang
+            $maxDays = 7;
+            if ($borrowing->book && $borrowing->book->category) {
+                $categoryMaxDays = $borrowing->book->category->max_borrow_days;
+                $maxDays = min($categoryMaxDays, 7);
+            }
+
+            $borrowing->due_date = now()->addDays($maxDays);
+
+            // Update catatan
+            $currentNotes = json_decode($borrowing->notes, true) ?? [];
+            $currentNotes['borrowed_details'] = [
+                'borrowed_at' => now()->toDateTimeString(),
+                'due_date_set_to' => $borrowing->due_date->format('Y-m-d'),
+                'note' => 'Stok sudah dikurangi saat approval'
+            ];
+            $borrowing->notes = json_encode($currentNotes);
+
+            $borrowing->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Buku berhasil ditandai sebagai dipinjam',
+                'data' => $borrowing->load(['user', 'book.category']),
+                'borrow_details' => [
+                    'due_date' => $borrowing->due_date->format('d-m-Y'),
+                    'max_days' => $maxDays,
+                    'days_remaining' => now()->diffInDays($borrowing->due_date, false),
+                    'stock_status' => 'Stok sudah dikurangi saat persetujuan (approved)'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menandai buku sebagai dipinjam',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -461,9 +535,18 @@ class BorrowingController extends Controller
             $borrowing->status = 'returned';
             $borrowing->return_date = $now;
             $borrowing->returned_at = $now;
+
+            // Update catatan
+            $currentNotes = json_decode($borrowing->notes, true) ?? [];
+            $currentNotes['return_details'] = [
+                'returned_at' => $now->toDateTimeString(),
+                'stock_increased' => true
+            ];
+            $borrowing->notes = json_encode($currentNotes);
+
             $borrowing->save();
 
-            // Update book available stock
+            // Update book available stock - TAMBAHKAN stok saat buku dikembalikan
             if ($borrowing->book) {
                 $borrowing->book->available_stock += 1;
                 $borrowing->book->save();
@@ -478,8 +561,13 @@ class BorrowingController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Buku berhasil dikembalikan',
-                'data' => $borrowing->load(['user', 'book.category', 'fine'])
+                'message' => 'Buku berhasil dikembalikan dan stok ditambahkan kembali',
+                'data' => $borrowing->load(['user', 'book.category', 'fine']),
+                'stock_info' => $borrowing->book ? [
+                    'book_title' => $borrowing->book->title,
+                    'previous_stock' => $borrowing->book->available_stock - 1,
+                    'current_stock' => $borrowing->book->available_stock
+                ] : null
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -522,6 +610,12 @@ class BorrowingController extends Controller
         }
 
         $borrowing->status = 'late';
+
+        // Update catatan
+        $currentNotes = json_decode($borrowing->notes, true) ?? [];
+        $currentNotes['marked_late_at'] = now()->toDateTimeString();
+        $borrowing->notes = json_encode($currentNotes);
+
         $borrowing->save();
 
         // Generate fine saat ditandai sebagai late
@@ -530,41 +624,6 @@ class BorrowingController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Status berhasil diubah menjadi late',
-            'data' => $borrowing->load(['user', 'book.category', 'fine'])
-        ]);
-    }
-
-    /**
-     * Mark fine as paid (admin)
-     */
-    public function markFinePaid($id)
-    {
-        $borrowing = Borrowing::with(['book', 'user', 'fine'])->find($id);
-
-        if (!$borrowing) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Borrowing not found'
-            ], 404);
-        }
-
-        if (!$borrowing->fine) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No fine found for this borrowing'
-            ], 400);
-        }
-
-        $borrowing->fine->status = 'paid';
-        $borrowing->fine->paid_at = now();
-        $borrowing->fine->save();
-
-        $borrowing->fine_paid = true;
-        $borrowing->save();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Fine marked as paid',
             'data' => $borrowing->load(['user', 'book.category', 'fine'])
         ]);
     }
@@ -588,7 +647,7 @@ class BorrowingController extends Controller
             ], 422);
         }
 
-        $borrowing = Borrowing::find($id);
+        $borrowing = Borrowing::with('book')->find($id);
 
         if (!$borrowing) {
             return response()->json([
@@ -597,58 +656,225 @@ class BorrowingController extends Controller
             ], 404);
         }
 
-        // Save old status
-        $oldStatus = $borrowing->status;
+        DB::beginTransaction();
+        try {
+            // Save old status
+            $oldStatus = $borrowing->status;
 
-        // Update status
-        $borrowing->status = $request->status;
+            // Handle stock operations based on status change
+            $stockOperation = null;
 
-        // Set timestamps based on status
-        switch ($request->status) {
-            case 'approved':
-                $borrowing->approved_at = now();
-                break;
-            case 'borrowed':
-                $borrowing->borrowed_at = now();
-                break;
-            case 'returned':
-                $borrowing->return_date = now();
-                $borrowing->returned_at = now();
-
-                // Jika status berubah menjadi returned, cek keterlambatan
-                if ($borrowing->due_date && $borrowing->due_date < now()) {
-                    $this->createFine($borrowing);
+            if ($oldStatus === 'pending' && $request->status === 'approved') {
+                // Kurangi stok saat mengubah dari pending ke approved
+                if ($borrowing->book && $borrowing->book->available_stock > 0) {
+                    $borrowing->book->available_stock -= 1;
+                    $borrowing->book->save();
+                    $stockOperation = 'stock_reduced';
                 }
-                break;
-            case 'rejected':
-                $borrowing->rejected_at = now();
-                $borrowing->rejection_reason = $request->reason;
-                break;
-            case 'late':
-                $this->createFine($borrowing);
-                break;
-        }
+            } elseif ($oldStatus === 'approved' && $request->status === 'rejected') {
+                // Kembalikan stok jika mengubah dari approved ke rejected
+                if ($borrowing->book) {
+                    $borrowing->book->available_stock += 1;
+                    $borrowing->book->save();
+                    $stockOperation = 'stock_restored';
+                }
+            } elseif (in_array($oldStatus, ['borrowed', 'late']) && $request->status === 'returned') {
+                // Tambah stok saat buku dikembalikan
+                if ($borrowing->book) {
+                    $borrowing->book->available_stock += 1;
+                    $borrowing->book->save();
+                    $stockOperation = 'stock_restored_on_return';
+                }
+            } elseif ($oldStatus === 'pending' && $request->status === 'rejected') {
+                // Stok tidak berubah karena belum pernah dikurangi
+                $stockOperation = 'no_stock_change_pending_to_rejected';
+            }
 
-        // Update notes if provided
-        if ($request->has('admin_notes')) {
+            // Update status
+            $borrowing->status = $request->status;
+
+            // Set timestamps based on status
+            switch ($request->status) {
+                case 'approved':
+                    $borrowing->approved_at = now();
+                    break;
+                case 'borrowed':
+                    $borrowing->borrowed_at = now();
+                    break;
+                case 'returned':
+                    $borrowing->return_date = now();
+                    $borrowing->returned_at = now();
+
+                    // Jika status berubah menjadi returned, cek keterlambatan
+                    if ($borrowing->due_date && $borrowing->due_date < now()) {
+                        $this->createFine($borrowing);
+                    }
+                    break;
+                case 'rejected':
+                    $borrowing->rejected_at = now();
+                    $borrowing->rejection_reason = $request->reason;
+                    break;
+                case 'late':
+                    $this->createFine($borrowing);
+                    break;
+            }
+
+            // Update notes dengan admin notes dan info stok
             $currentNotes = json_decode($borrowing->notes, true) ?? [];
             $currentNotes['status_change'] = [
                 'from' => $oldStatus,
                 'to' => $request->status,
                 'at' => now()->toDateTimeString(),
-                'admin_notes' => $request->admin_notes
+                'admin_notes' => $request->admin_notes,
+                'stock_operation' => $stockOperation,
+                'book_available_stock' => $borrowing->book ? $borrowing->book->available_stock : null
             ];
             $borrowing->notes = json_encode($currentNotes);
+
+            $borrowing->save();
+
+            DB::commit();
+
+            $message = 'Status peminjaman berhasil diubah';
+            if ($stockOperation === 'stock_reduced') {
+                $message .= ' (stok buku dikurangi)';
+            } elseif ($stockOperation === 'stock_restored') {
+                $message .= ' (stok buku dikembalikan)';
+            } elseif ($stockOperation === 'stock_restored_on_return') {
+                $message .= ' (stok buku ditambahkan kembali)';
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => $borrowing->load(['user', 'book.category']),
+                'stock_operation' => $stockOperation
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengubah status peminjaman',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Cancel borrowing request (user)
+     */
+    public function cancel($id)
+    {
+        $borrowing = Borrowing::with('book')->find($id);
+
+        if (!$borrowing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Peminjaman tidak ditemukan'
+            ], 404);
         }
 
-        $borrowing->save();
+        $user = auth()->user();
+        if ($borrowing->user_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak'
+            ], 403);
+        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Status peminjaman berhasil diubah',
-            'data' => $borrowing->load(['user', 'book.category'])
-        ]);
+        if ($borrowing->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya permintaan pending yang dapat dibatalkan'
+            ], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            $borrowing->status = 'cancelled';
+
+            // Update catatan
+            $currentNotes = json_decode($borrowing->notes, true) ?? [];
+            $currentNotes['cancelled_at'] = now()->toDateTimeString();
+            $currentNotes['cancellation_note'] = 'Dibatalkan oleh user. Stok tidak berubah karena status masih pending.';
+            $borrowing->notes = json_encode($currentNotes);
+
+            $borrowing->save();
+
+            // PERUBAHAN: TIDAK perlu menambah stok karena stok belum pernah dikurangi
+            // Hanya log informasinya
+            if ($borrowing->book) {
+                Log::info("Borrowing #{$borrowing->id} cancelled by user. Stock unchanged: {$borrowing->book->available_stock}");
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Permintaan peminjaman berhasil dibatalkan. Stok buku tidak berubah.',
+                'data' => $borrowing
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membatalkan permintaan',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
+
+    // ==================== HELPER METHODS ====================
+
+    /**
+     * Create fine for late return
+     */
+    private function createFine(Borrowing $borrowing)
+    {
+        try {
+            $returnDate = $borrowing->return_date ? Carbon::parse($borrowing->return_date) : now();
+            $dueDate = Carbon::parse($borrowing->due_date);
+            $lateDays = $returnDate->diffInDays($dueDate, false) * -1;
+
+            if ($lateDays <= 0) {
+                return null;
+            }
+
+            // Fine calculation: Rp 1,000 per day
+            $finePerDay = 1000;
+            $amount = $lateDays * $finePerDay;
+
+            if ($borrowing->fine) {
+                $fine = $borrowing->fine;
+                $fine->amount = $amount;
+                $fine->late_days = $lateDays;
+                $fine->save();
+            } else {
+                $fine = Fine::create([
+                    'borrowing_id' => $borrowing->id,
+                    'user_id' => $borrowing->user_id,
+                    'amount' => $amount,
+                    'late_days' => $lateDays,
+                    'fine_date' => now(),
+                    'status' => 'unpaid',
+                    'description' => 'Denda keterlambatan pengembalian buku: ' . ($borrowing->book ? $borrowing->book->title : 'Unknown Book')
+                ]);
+            }
+
+            $borrowing->fine_amount = $amount;
+            $borrowing->late_days = $lateDays;
+            $borrowing->fine_paid = false;
+            $borrowing->save();
+
+            return $fine;
+        } catch (\Exception $e) {
+            Log::error("Error creating fine for borrowing #{$borrowing->id}: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    // ==================== METODE-METODE LAIN TETAP SAMA ====================
+    // Berikut adalah method-method lain yang tidak berubah logika stoknya
 
     /**
      * Get currently borrowed books (admin)
@@ -1060,63 +1286,6 @@ class BorrowingController extends Controller
     }
 
     /**
-     * Cancel borrowing request (user)
-     */
-    public function cancel($id)
-    {
-        $borrowing = Borrowing::find($id);
-
-        if (!$borrowing) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Peminjaman tidak ditemukan'
-            ], 404);
-        }
-
-        $user = auth()->user();
-        if ($borrowing->user_id !== $user->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Akses ditolak'
-            ], 403);
-        }
-
-        if ($borrowing->status !== 'pending') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Hanya permintaan pending yang dapat dibatalkan'
-            ], 400);
-        }
-
-        DB::beginTransaction();
-        try {
-            $borrowing->status = 'cancelled';
-            $borrowing->save();
-
-            // Increment book stock jika dibatalkan
-            if ($borrowing->book) {
-                $borrowing->book->available_stock += 1;
-                $borrowing->book->save();
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Permintaan peminjaman berhasil dibatalkan',
-                'data' => $borrowing
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal membatalkan permintaan',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
      * Get borrowing statistics (user)
      */
     public function myStats()
@@ -1198,52 +1367,38 @@ class BorrowingController extends Controller
         ]);
     }
 
-    // ==================== HELPER METHODS ====================
-
     /**
-     * Create fine for late return
+     * Mark fine as paid (admin)
      */
-    private function createFine(Borrowing $borrowing)
+    public function markFinePaid($id)
     {
-        try {
-            $returnDate = $borrowing->return_date ? Carbon::parse($borrowing->return_date) : now();
-            $dueDate = Carbon::parse($borrowing->due_date);
-            $lateDays = $returnDate->diffInDays($dueDate, false) * -1;
+        $borrowing = Borrowing::with(['book', 'user', 'fine'])->find($id);
 
-            if ($lateDays <= 0) {
-                return null;
-            }
-
-            // Fine calculation: Rp 1,000 per day
-            $finePerDay = 1000;
-            $amount = $lateDays * $finePerDay;
-
-            if ($borrowing->fine) {
-                $fine = $borrowing->fine;
-                $fine->amount = $amount;
-                $fine->late_days = $lateDays;
-                $fine->save();
-            } else {
-                $fine = Fine::create([
-                    'borrowing_id' => $borrowing->id,
-                    'user_id' => $borrowing->user_id,
-                    'amount' => $amount,
-                    'late_days' => $lateDays,
-                    'fine_date' => now(),
-                    'status' => 'unpaid',
-                    'description' => 'Denda keterlambatan pengembalian buku: ' . ($borrowing->book ? $borrowing->book->title : 'Unknown Book')
-                ]);
-            }
-
-            $borrowing->fine_amount = $amount;
-            $borrowing->late_days = $lateDays;
-            $borrowing->fine_paid = false;
-            $borrowing->save();
-
-            return $fine;
-        } catch (\Exception $e) {
-            Log::error("Error creating fine for borrowing #{$borrowing->id}: " . $e->getMessage());
-            return null;
+        if (!$borrowing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Borrowing not found'
+            ], 404);
         }
+
+        if (!$borrowing->fine) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No fine found for this borrowing'
+            ], 400);
+        }
+
+        $borrowing->fine->status = 'paid';
+        $borrowing->fine->paid_at = now();
+        $borrowing->fine->save();
+
+        $borrowing->fine_paid = true;
+        $borrowing->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Fine marked as paid',
+            'data' => $borrowing->load(['user', 'book.category', 'fine'])
+        ]);
     }
 }
