@@ -102,12 +102,12 @@ class UserController extends Controller
             // Title Header
             $pdf->SetFont('helvetica', 'B', 9);
             $pdf->SetTextColor(255, 255, 255);
-            $pdf->SetXY(4, 4);
+            $pdf->SetXY(4, 6);
             $pdf->Cell(60, 4, "KARTU ANGGOTA PERPUSTAKAAN", 0, 1, 'L', 0, '', 0);
 
             // Subtitle
-            $pdf->SetFont('helvetica', '', 7);
-            $pdf->SetXY(4, 8);
+            $pdf->SetFont('helvetica', 'B', 7);
+            $pdf->SetXY(4, 13.5);
             $pdf->Cell(60, 3, "Universitas IPWIJA", 0, 1, 'L', 0, '', 0);
 
             // Decorative line
